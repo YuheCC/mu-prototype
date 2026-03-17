@@ -1,0 +1,66 @@
+.ddh-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0 40px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  background: var(--bg-primary);
+}
+
+.ddh-section {
+  margin-top: 16px;
+}
+
+.ddh-table-wrap {
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  overflow-x: auto;
+  box-shadow: var(--shadow-card);
+}
+
+.ddh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.ddh-table th,
+.ddh-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+}
+
+.ddh-table th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.ddh-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+.ddh-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ddh-view-btn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-muted);
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+
+.ddh-view-btn:hover {
+  background: rgba(26, 115, 232, 0.16);
+}
+

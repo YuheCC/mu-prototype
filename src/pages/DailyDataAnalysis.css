@@ -1,0 +1,165 @@
+.dda-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0 40px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  background: var(--bg-primary);
+}
+
+.dda-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dda-history-btn {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-muted);
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+}
+
+.dda-history-btn:hover {
+  background: rgba(26, 115, 232, 0.16);
+}
+
+.dda-workflow {
+  margin-top: 8px;
+  margin-bottom: 32px;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dda-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+}
+
+.dda-step-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-muted);
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dda-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dda-step-title {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dda-step-desc {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.dda-arrow {
+  font-size: 1.4rem;
+  color: var(--text-muted);
+}
+
+.dda-section {
+  margin-bottom: 28px;
+}
+
+.dda-section-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.dda-section-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.dda-table-wrap {
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  overflow-x: auto;
+  box-shadow: var(--shadow-card);
+}
+
+.dda-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.dda-table th,
+.dda-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+}
+
+.dda-table th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.dda-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+.dda-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dda-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dda-summary-item {
+  flex: 1 1 220px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+}
+
+.dda-summary-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.dda-summary-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+

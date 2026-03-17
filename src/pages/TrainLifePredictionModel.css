@@ -1,0 +1,237 @@
+.train-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 40px 60px;
+  width: 100%;
+}
+
+.train-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.train-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.train-back-btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.train-back-btn:hover {
+  background: var(--bg-hover);
+}
+
+.train-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.train-section {
+  margin-bottom: 32px;
+}
+
+.train-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.train-field {
+  margin-top: 12px;
+}
+
+.train-field + .train-field {
+  margin-top: 18px;
+}
+
+.train-label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.train-required {
+  color: #d93025;
+}
+
+.train-count {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.train-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  line-height: 1.45;
+}
+
+.train-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.train-input::placeholder {
+  color: var(--text-muted);
+}
+
+.train-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.train-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.train-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.train-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.train-select-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.train-select {
+  appearance: none;
+  width: 100%;
+  padding: 12px 40px 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.train-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.train-select-caret {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.train-file-input {
+  display: none;
+}
+
+.train-upload-zone {
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px dashed var(--border);
+  background: var(--bg-secondary);
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.train-upload-zone:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border);
+}
+
+.train-upload-icon {
+  font-size: 2rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.train-upload-text {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.train-upload-formats {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.train-choose-btn {
+  margin-top: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: #1f2937;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+}
+
+.train-choose-btn:hover {
+  background: #374151;
+}
+
+.train-footer {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: center;
+}
+
+.train-start-btn {
+  padding: 12px 28px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+}
+
+.train-start-btn:hover {
+  background: var(--accent-hover);
+}
