@@ -746,6 +746,14 @@ export default function Ask() {
                         </div>
                       </div>
                       <p className="ask-upload-tip">{msg.uploadTip}</p>
+                      <button
+                        type="button"
+                        className="inline-action-btn"
+                        onClick={() => uploadInputRef.current?.click()}
+                        disabled={isTyping}
+                      >
+                        Upload data
+                      </button>
                     </>
                   )}
                   {msg.block === 'parsingFile' && (
@@ -824,9 +832,17 @@ export default function Ask() {
                         <button
                           type="button"
                           className="inline-action-btn"
-                          onClick={() => navigate('/workbench/new-life-prediction')}
+                          onClick={() => navigate('/features-workflows?highlight=new-life-prediction')}
                         >
                           Add Life Prediction to Workbench
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-action-btn"
+                          onClick={() => uploadInputRef.current?.click()}
+                          disabled={isTyping}
+                        >
+                          Continue prediction
                         </button>
                       </div>
                     </>

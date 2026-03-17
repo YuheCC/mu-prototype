@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import './FeaturesWorkflows.css'
 
 const features = [
@@ -46,8 +46,24 @@ function filterTasksByRange(tasks, range) {
 }
 
 export default function FeaturesWorkflows() {
+  const location = useLocation()
   const navigate = useNavigate()
   const [timeRange, setTimeRange] = useState('today')
+  const [highlightFeature, setHighlightFeature] = useState(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const v = params.get('highlight')
+    if (!v) return
+
+    setHighlightFeature(v)
+    const t = setTimeout(() => {
+      setHighlightFeature(null)
+      params.delete('highlight')
+      navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' }, { replace: true })
+    }, 1600)
+    return () => clearTimeout(t)
+  }, [location.pathname, location.search, navigate])
 
   const filtered = filterTasksByRange(mockKanbanTasks, timeRange)
   const featureTasks = filtered.filter((t) => t.type === 'feature')
@@ -158,7 +174,7 @@ export default function FeaturesWorkflows() {
             <button
               key={f.id}
               type="button"
-              className="feature-card feature-card-button"
+              className={`feature-card feature-card-button ${highlightFeature === 'new-life-prediction' && f.name === 'New Life Prediction' ? 'feature-card-highlight' : ''}`}
               onClick={() => {
                 if (f.href) navigate(f.href)
               }}
