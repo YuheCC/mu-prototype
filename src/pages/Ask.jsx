@@ -6,6 +6,20 @@ import { useAskConversations } from '../context/AskContext'
 import './Ask.css'
 
 const TOOL_OPTIONS = ['Formulate', 'Life Prediction', 'Electrolyte Design', 'Electrode Design']
+const WELCOME_TOOL_CARDS = [
+  { title: 'Life Prediction', desc: 'Run battery life prediction workflow.' },
+  { title: 'Formulation', desc: 'Build electrolyte formulation and analyze results.' },
+  { title: 'Design', desc: 'Design electrolyte/electrode and compare candidates.' },
+  { title: 'Recent Tasks', desc: 'Open your recent tasks and assets.' },
+]
+const WELCOME_PROMPTS = [
+  'What are the key considerations for electrolyte solvent selection in lithium-ion batteries?',
+  'What are the advantages and application prospects of solid electrolytes in next-generation battery technology?',
+  'What is the formation mechanism of SEI layer and its impact on battery performance?',
+  'What are the stability issues and solutions for high-nickel cathode materials?',
+  'What are the causes of lithium dendrite formation and methods to suppress them?',
+  'How do sodium-ion batteries compare with lithium-ion batteries in terms of performance?',
+]
 
 // Inline chart for prediction result (Capacity Retention % vs Cycle ID)
 const CHART_W = 480
@@ -285,6 +299,8 @@ export default function Ask() {
 
   const current = conversations.find(c => c.id === currentId) || conversations[0]
   const messages = current?.messages ?? initialMessages
+  const hasUserMessage = messages.some((m) => m.role === 'user')
+  const showWelcomeState = !hasUserMessage
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -628,15 +644,43 @@ export default function Ask() {
     }, 600)
   }
 
+  const handleWelcomePrompt = (text) => {
+    setInput(text)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
+
+  const handleWelcomeToolClick = (title) => {
+    if (title === 'Recent Tasks') {
+      navigate('/tasks-data')
+      return
+    }
+    const mapping = {
+      'Life Prediction': 'Life Prediction',
+      Formulation: 'Formulate',
+      Design: 'Electrolyte Design',
+    }
+    const nextTool = mapping[title]
+    if (nextTool) {
+      setSelectedTool(nextTool)
+      setInput((prev) => applyToolPrefix(prev, nextTool))
+      setTimeout(() => textareaRef.current?.focus(), 0)
+    }
+  }
+
   return (
     <div className="ask-page">
       <aside className="ask-sidebar">
+        <div className="ask-sidebar-top">ASK</div>
         <button type="button" className="btn-new-chat" onClick={handleNewConversation}>
           <span className="btn-new-chat-icon">+</span>
-          新对话
+          New Chat
+        </button>
+        <button type="button" className="ask-search-btn">
+          <span className="ask-search-icon">⌕</span>
+          Search Chat
         </button>
         <div className="ask-history">
-          <div className="ask-history-label">对话记录</div>
+          <div className="ask-history-label">CHAT HISTORY</div>
           <ul className="conversation-list">
             {conversations.map((conv) => (
               <li key={conv.id} className="conversation-list-item">
@@ -693,19 +737,53 @@ export default function Ask() {
       </aside>
 
       <div className="ask-main">
-        <header className="ask-header">
-          <h1>Ask</h1>
-          <p className="ask-subtitle">Chat with AI for analysis, predictions, and workflows</p>
-        </header>
+        {!showWelcomeState && (
+          <header className="ask-header">
+            <h1>Ask</h1>
+            <p className="ask-subtitle">Chat with AI for analysis, predictions, and workflows</p>
+          </header>
+        )}
 
         <div className="chat-container">
-          <div className="messages">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`message message-${msg.role}`}>
-                <div className="message-avatar">
-                  {msg.role === 'user' ? 'U' : '◆'}
-                </div>
-                <div className="message-content">
+          {showWelcomeState ? (
+            <div className="ask-welcome">
+              <h2 className="ask-welcome-title">Welcome to MU.</h2>
+              <p className="ask-welcome-subtitle">Start building with tools</p>
+              <div className="ask-welcome-tools-grid">
+                {WELCOME_TOOL_CARDS.map((card) => (
+                  <button
+                    key={card.title}
+                    type="button"
+                    className="ask-welcome-tool-card"
+                    onClick={() => handleWelcomeToolClick(card.title)}
+                  >
+                    <div className="ask-welcome-tool-title">{card.title}</div>
+                    <div className="ask-welcome-tool-desc">{card.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <p className="ask-welcome-subtitle ask-welcome-questions-title">Or simply describe your research goal here.</p>
+              <div className="ask-welcome-prompts">
+                {WELCOME_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="ask-welcome-prompt-chip"
+                    onClick={() => handleWelcomePrompt(prompt)}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="messages">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`message message-${msg.role}`}>
+                  <div className="message-avatar">
+                    {msg.role === 'user' ? 'U' : '◆'}
+                  </div>
+                  <div className="message-content">
                   {msg.block === 'lifePrediction' && (
                     <>
                       <h4 className="ask-msg-heading">Common approaches</h4>
@@ -902,21 +980,22 @@ export default function Ask() {
                       )}
                     </>
                   )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {isTyping && (
-              <div className="message message-assistant">
-                <div className="message-avatar">◆</div>
-                <div className="message-content typing">
-                  <span className="dot"></span>
-                  <span className="dot"></span>
-                  <span className="dot"></span>
+              ))}
+              {isTyping && (
+                <div className="message message-assistant">
+                  <div className="message-avatar">◆</div>
+                  <div className="message-content typing">
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                  </div>
                 </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
 
           <form className="chat-input-area" onSubmit={handleSubmit}>
             <div className="composer">
