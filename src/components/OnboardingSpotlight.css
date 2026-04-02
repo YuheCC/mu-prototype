@@ -1,0 +1,178 @@
+.onb-spotlight-root {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.onb-dim {
+  position: fixed;
+  background: rgba(15, 23, 42, 0.52);
+  pointer-events: auto;
+  transition: opacity 0.35s ease;
+}
+
+.onb-dim-top {
+  left: 0;
+  right: 0;
+  top: 0;
+}
+
+.onb-dim-left {
+  left: 0;
+}
+
+.onb-dim-right {
+  right: 0;
+}
+
+.onb-dim-bottom {
+  left: 0;
+  right: 0;
+}
+
+.onb-dim-full {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.onb-spotlight-ring {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 0 0 2px rgba(47, 95, 59, 0.25),
+    0 0 32px rgba(47, 95, 59, 0.2);
+  animation: onb-spotlight-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onb-spotlight-ring {
+    animation: none;
+  }
+}
+
+@keyframes onb-spotlight-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.3),
+      0 0 0 2px rgba(47, 95, 59, 0.2),
+      0 0 24px rgba(47, 95, 59, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.5),
+      0 0 0 3px rgba(47, 95, 59, 0.35),
+      0 0 40px rgba(47, 95, 59, 0.28);
+  }
+}
+
+.onb-tooltip {
+  position: fixed;
+  z-index: 501;
+  pointer-events: auto;
+  padding: 18px 20px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.06),
+    0 20px 40px -16px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+/* 顶栏旁停靠，避免压住中部/底部高亮区（推荐问题、表单等） */
+.onb-tooltip--floating {
+  max-height: min(46vh, 340px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media (max-width: 420px) {
+  .onb-tooltip--floating {
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+.onb-tooltip-step {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent, #2f5f3b);
+  margin-bottom: 6px;
+}
+
+.onb-tooltip-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #334155;
+  letter-spacing: -0.02em;
+}
+
+.onb-tooltip-body {
+  margin: 0 0 14px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.onb-tooltip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.onb-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.onb-btn-primary {
+  background: var(--accent, #2f5f3b);
+  color: #fff;
+}
+
+.onb-btn-primary:hover {
+  filter: brightness(1.04);
+}
+
+.onb-btn-secondary {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.onb-btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.onb-btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+}
+
+.onb-btn-ghost:hover {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.onb-tooltip-hint {
+  margin: 12px 0 0;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+}

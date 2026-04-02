@@ -1,0 +1,365 @@
+.acct-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 22px 24px 40px;
+}
+
+.acct-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.acct-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.acct-back {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.acct-back:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.acct-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.acct-nav {
+  position: sticky;
+  top: 74px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.acct-nav-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 10px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.acct-nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.acct-nav-item.active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.acct-main {
+  min-width: 0;
+}
+
+.acct-section {
+  display: grid;
+  gap: 12px;
+}
+
+.acct-section-title {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: none;
+  margin-top: 8px;
+}
+
+.acct-card {
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  padding: 14px 14px;
+}
+
+.acct-card-dark {
+  background: #111827;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.acct-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.acct-row-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.acct-row-sub {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.acct-pill {
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.acct-form-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.acct-form-row:last-child {
+  border-bottom: none;
+}
+
+.acct-form-label {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.acct-input,
+.acct-select {
+  justify-self: end;
+  width: min(220px, 100%);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.acct-input:focus,
+.acct-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.acct-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+}
+
+.acct-btn {
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 650;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.acct-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.acct-btn.subtle {
+  background: var(--bg-secondary);
+}
+
+.acct-btn.primary {
+  background: var(--bg-hover);
+}
+
+.acct-btn.solid {
+  background: #111827;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.acct-btn.danger {
+  border-color: rgba(185, 28, 28, 0.3);
+  color: #b91c1c;
+  background: rgba(185, 28, 28, 0.06);
+}
+
+.acct-session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.acct-session-row:last-child {
+  border-bottom: none;
+}
+
+.acct-session-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.acct-session-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.8);
+  flex-shrink: 0;
+}
+
+.acct-session-name {
+  color: var(--text-primary);
+  font-weight: 650;
+  font-size: 0.9rem;
+}
+
+.acct-session-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.acct-session-time {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.acct-hint {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.acct-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.acct-mini-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.acct-plan-title {
+  margin-top: 8px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.acct-card-dark .acct-plan-title,
+.acct-card-dark .acct-row-sub,
+.acct-card-dark .acct-mini-label {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.acct-plan-price {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
+.acct-card-dark .acct-plan-price {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.acct-usage-row {
+  display: grid;
+  gap: 10px;
+}
+
+.acct-usage-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.acct-usage-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.acct-usage-value {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.acct-usage-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+
+.acct-usage-bar-fill {
+  height: 100%;
+  background: rgba(100, 116, 139, 0.8);
+}
+
+.acct-usage-sub {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 920px) {
+  .acct-layout {
+    grid-template-columns: 1fr;
+  }
+  .acct-nav {
+    position: static;
+    top: auto;
+  }
+  .acct-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .acct-form-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .acct-input,
+  .acct-select {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+

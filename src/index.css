@@ -8,10 +8,10 @@
   --text-primary: #3c4043;
   --text-secondary: #5f6368;
   --text-muted: #80868b;
-  --accent: #1a73e8;
-  --accent-hover: #1557b0;
-  --accent-muted: rgba(26, 115, 232, 0.08);
-  --user-msg-bg: #1a73e8;
+  --accent: #56b26a;
+  --accent-hover: #48985a;
+  --accent-muted: rgba(86, 178, 106, 0.12);
+  --user-msg-bg: #56b26a;
   --assistant-msg-bg: #f1f3f4;
   --success: #1e8e3e;
   --radius: 12px;

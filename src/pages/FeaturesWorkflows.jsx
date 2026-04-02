@@ -73,7 +73,7 @@ export default function FeaturesWorkflows() {
 
   return (
     <div className="features-workflows-page">
-      <header className="page-header">
+      <header className="page-header" data-onboarding-anchor="workbench-intro-header">
         <h1>Workbench</h1>
         <p className="page-subtitle">Built-in features and your custom workflows</p>
       </header>

@@ -1,18 +1,12 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 
-const initialMessages = [
-  {
-    id: 1,
-    role: 'assistant',
-    content:
-      'Hi, I\'m MU\'s AI assistant. Ask me anything about batteries and electrochemistry. You can also use tools like molecular analysis, battery life prediction, and formulation optimization to speed up your analysis and decisions.'
-  }
-]
+const initialMessages = []
 
 function createNewConversation() {
   return {
     id: `conv-${Date.now()}`,
     title: '新对话',
+    isDraft: true,
     messages: [...initialMessages]
   }
 }

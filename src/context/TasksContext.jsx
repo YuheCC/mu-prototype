@@ -13,8 +13,12 @@ export function TasksProvider({ children }) {
     return tasks.find((t) => t.id === id)
   }, [tasks])
 
+  const removeTask = useCallback((id) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
   return (
-    <TasksContext.Provider value={{ tasks, addTask, getTaskById }}>
+    <TasksContext.Provider value={{ tasks, addTask, getTaskById, removeTask }}>
       {children}
     </TasksContext.Provider>
   )

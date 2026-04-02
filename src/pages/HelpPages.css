@@ -1,0 +1,85 @@
+.help-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  color: #111827;
+}
+
+.help-page-header {
+  margin-bottom: 28px;
+}
+
+.help-page-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: var(--accent, #2f5f3b);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.help-page-back:hover {
+  text-decoration: underline;
+}
+
+.help-page-header h1 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.help-page-lead {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.help-onboarding-cta-wrap {
+  margin: 16px 0 0;
+}
+
+.help-onboarding-cta {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(47, 95, 59, 0.35);
+  background: rgba(47, 95, 59, 0.06);
+  color: var(--accent, #2f5f3b);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.help-onboarding-cta:hover {
+  background: rgba(47, 95, 59, 0.1);
+  border-color: rgba(47, 95, 59, 0.5);
+}
+
+.help-page-section {
+  margin-bottom: 24px;
+}
+
+.help-page-section h2 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.help-page-section ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.help-onboarding-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #334155;
+  line-height: 1.75;
+}
+
+.help-onboarding-steps li + li {
+  margin-top: 12px;
+}
