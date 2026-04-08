@@ -11,6 +11,7 @@ import Ask from './pages/Ask'
 import TasksData from './pages/TasksData'
 import FeaturesWorkflows from './pages/FeaturesWorkflows'
 import ManageFeatures from './pages/ManageFeatures'
+import ManageWorkflows from './pages/ManageWorkflows'
 import FormulateIntro from './pages/FormulateIntro'
 import NewLifePrediction from './pages/NewLifePrediction'
 import TrainLifePredictionModel from './pages/TrainLifePredictionModel'
@@ -18,7 +19,10 @@ import ToolsDocs from './pages/ToolsDocs'
 import HelpUserCenter from './pages/HelpUserCenter'
 import HelpOnboarding from './pages/HelpOnboarding'
 import AccountSettings from './pages/AccountSettings'
+import AccountPlans from './pages/AccountPlans'
 import DailyDataAnalysis from './pages/DailyDataAnalysis'
+import LimsPredictReportWorkflow from './pages/LimsPredictReportWorkflow'
+import LimsPredictReportHistory from './pages/LimsPredictReportHistory'
 import DailyDataHistory from './pages/DailyDataHistory'
 import DailyDataHistoryDetail from './pages/DailyDataHistoryDetail'
 import LifePredictionResult from './pages/LifePredictionResult'
@@ -235,15 +239,19 @@ function App() {
                     <Route path="/tasks-data/*" element={<TasksData />} />
                     <Route path="/features-workflows" element={<FeaturesWorkflows />} />
                     <Route path="/workbench/manage-features" element={<ManageFeatures />} />
+                    <Route path="/workbench/manage-workflows" element={<ManageWorkflows />} />
                     <Route path="/workbench/features/formulate" element={<FormulateIntro />} />
                     <Route path="/workbench/new-life-prediction" element={<NewLifePrediction />} />
                     <Route path="/workbench/train-life-prediction-model" element={<TrainLifePredictionModel />} />
                     <Route path="/workbench/daily-data-analysis" element={<DailyDataAnalysis />} />
+                    <Route path="/workbench/lims-predict-report" element={<LimsPredictReportWorkflow />} />
+                    <Route path="/workbench/lims-predict-report-history" element={<LimsPredictReportHistory />} />
                     <Route path="/workbench/daily-data-history" element={<DailyDataHistory />} />
                     <Route path="/workbench/daily-data-history/:id" element={<DailyDataHistoryDetail />} />
                     <Route path="/workbench/activity/life-prediction" element={<LifePredictionResult />} />
                     <Route path="/tools" element={<ToolsDocs />} />
                     <Route path="/account" element={<AccountSettings />} />
+                    <Route path="/account/plans" element={<AccountPlans />} />
                     <Route path="/help/user" element={<HelpUserCenter />} />
                     <Route path="/help/onboarding" element={<HelpOnboarding />} />
                   </Routes>

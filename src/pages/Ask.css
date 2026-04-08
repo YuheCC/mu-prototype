@@ -1611,32 +1611,57 @@
 .ask-molecule-card {
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius);
+  gap: 10px;
+  border-radius: 18px;
   border: 1px solid var(--border-light);
-  background: #fff7e6;
-  padding: 16px 16px 0;
-  box-shadow: var(--shadow-card);
-  max-width: 640px;
+  background: #ffffff;
+  padding: 16px 18px 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  max-width: 720px;
 }
 
-.ask-mol-left {
-  width: 140px;
-  height: 140px;
-  background: #ffe0b2;
-  border-radius: 8px;
+.ask-mol-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #c25e00;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
-.ask-mol-main {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
+.ask-mol-name {
+  font-weight: 800;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.ask-mol-smiles-line {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ask-mol-score-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6f4ea;
+  color: #1e8e3e;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.ask-mol-fav-pill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(234, 179, 8, 0.6);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ask-mol-fav-pill:hover {
+  background: #fef3c7;
 }
 
 .ask-mol-row {
@@ -1665,15 +1690,22 @@
   font-weight: 600;
 }
 
+.ask-mol-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px 24px;
+  align-items: flex-start;
+}
+
 .ask-mol-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 32px;
-  margin-top: 6px;
+  gap: 6px 24px;
+  margin-top: 2px;
 }
 
 .ask-mol-grid-item {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .ask-mol-k {
@@ -1684,41 +1716,24 @@
   color: var(--text-primary);
 }
 
+.ask-mol-panel {
+  border-radius: 14px;
+}
+
 .ask-mol-desc {
   margin-top: 8px;
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
-.ask-molecule-card:not(:has(.ask-mol-find-similar-btn)) .ask-mol-fav-btn {
-  border-radius: 0 0 var(--radius) var(--radius);
-}
-
-.ask-molecule-card:has(.ask-mol-find-similar-btn) .ask-mol-find-similar-btn {
-  border-radius: 0 0 var(--radius) var(--radius);
-}
-
-.ask-mol-fav-btn {
-  width: 100%;
-  margin-top: 8px;
-  border: none;
-  border-radius: 0;
-  padding: 12px 16px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-}
-
-.ask-mol-fav-btn:hover {
-  background: var(--accent-hover);
+.ask-msg-molecule-wrap {
+  display: grid;
+  gap: 10px;
 }
 
 .ask-mol-find-similar-btn {
   width: 100%;
-  margin-top: 8px;
+  margin-top: 2px;
   padding: 10px 16px;
   font-size: 0.88rem;
   font-weight: 500;
@@ -4200,4 +4215,168 @@
   padding: 6px 8px;
   font-size: 0.74rem;
   line-height: 1.45;
+}
+
+.ask-wf-arch-card {
+  margin-top: 12px;
+}
+
+.ask-wf-arch-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #f8fafc 0%, var(--bg-primary) 100%);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.ask-wf-arch-card-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.ask-wf-arch-card-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ask-wf-arch-steps {
+  padding: 14px 16px 10px;
+}
+
+.ask-wf-arch-step {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 0 14px;
+  align-items: stretch;
+}
+
+.ask-wf-arch-step:not(:last-child) {
+  margin-bottom: 2px;
+}
+
+.ask-wf-arch-step-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ask-wf-arch-step-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.ask-wf-arch-step-line {
+  flex: 1;
+  width: 0;
+  min-height: 18px;
+  margin: 5px 0 3px;
+  border-left: 2px dashed #cbd5e1;
+}
+
+.ask-wf-arch-step-main {
+  padding-bottom: 12px;
+}
+
+.ask-wf-arch-step-role {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: #64748b;
+  padding: 3px 9px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.ask-wf-arch-step-desc {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.52;
+  color: var(--text-secondary);
+}
+
+.ask-wf-arch-card-foot {
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--border-light);
+  background: #f8fafc;
+}
+
+.ask-wf-arch-card-foot .ask-wf-arch-btn {
+  margin: 0;
+}
+
+.ask-wf-saved-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px;
+  max-width: 100%;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.message-assistant .ask-wf-saved-card {
+  background: linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
+  border-color: #e4e4e7;
+}
+
+.ask-wf-saved-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  margin-top: 1px;
+  border-radius: 8px;
+  background: #dcfce7;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.ask-wf-saved-text {
+  margin: 0;
+  padding: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.ask-wf-saved-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #15803d;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ask-wf-saved-link:hover {
+  color: #166534;
+  text-decoration-thickness: 1.5px;
 }

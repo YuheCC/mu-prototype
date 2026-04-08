@@ -9,6 +9,49 @@
   background: var(--bg-primary);
 }
 
+.dda-page .page-header {
+  padding: 24px 0 8px;
+}
+
+.dda-page .page-header-with-back {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.dda-page .page-header h1 {
+  font-size: 1.65rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.dda-page .page-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 720px;
+}
+
+.dda-page .page-back-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.dda-page .page-back-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
 .dda-header-actions {
   display: flex;
   align-items: center;
@@ -40,6 +83,22 @@
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.dda-workflow--lims {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  row-gap: 12px;
+}
+
+.dda-workflow--lims .dda-step {
+  flex: 1 1 140px;
+  min-width: 120px;
+  max-width: 220px;
+}
+
+.dda-workflow--lims .dda-arrow {
+  flex-shrink: 0;
 }
 
 .dda-step {

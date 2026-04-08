@@ -1,11 +1,10 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './AccountSettings.css'
 
 const NAV = [
   { id: 'account', label: '账户管理' },
-  { id: 'subscription', label: '订阅' },
-  { id: 'usage', label: '使用' },
+  { id: 'subscription', label: '订阅和使用' },
 ]
 
 function UsageBar({ value = 0 }) {
@@ -25,28 +24,64 @@ function UsageBar({ value = 0 }) {
 }
 
 export default function AccountSettings() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState('account')
   const [firstName, setFirstName] = useState('yuhe')
   const [lastName, setLastName] = useState('chen')
   const [theme, setTheme] = useState('System')
-
-  const sessions = useMemo(
-    () => [
-      { id: 'web', name: 'Web', time: '20 days ago' },
-      { id: 'desktop-1', name: 'Desktop App', time: '20 days ago' },
-      { id: 'desktop-2', name: 'Desktop App', time: '13 days ago' },
-      { id: 'desktop-3', name: 'Desktop App', time: '6 days ago' },
-    ],
-    []
-  )
+  const loginMethods = [
+    {
+      id: 'phone',
+      label: 'Phone',
+      icon: '📱',
+      iconBg: '#f97316',
+      value: '(+86) 181 **** 1084',
+      actionText: 'Edit',
+    },
+    {
+      id: 'email',
+      label: 'Email',
+      icon: '✉️',
+      iconBg: '#3b82f6',
+      value: 'Not set',
+      actionText: 'Edit',
+    },
+    {
+      id: 'wechat',
+      label: 'WeChat',
+      icon: '💚',
+      iconBg: '#22c55e',
+      value: 'Connected',
+      actionText: 'Disconnect',
+      actionVariant: 'danger',
+    },
+    {
+      id: 'google',
+      label: 'Google',
+      icon: 'G',
+      iconBg: '#ffffff',
+      value: 'Not connected',
+      actionText: 'Connect',
+      iconColor: '#1a73e8',
+      iconBorder: '1px solid rgba(148, 163, 184, 0.5)',
+    },
+    {
+      id: 'apple',
+      label: 'Apple',
+      icon: '',
+      iconBg: '#111827',
+      value: 'Not connected',
+      actionText: 'Connect',
+      iconColor: '#fff',
+    },
+  ]
 
   return (
     <div className="acct-page">
       <header className="acct-header">
-        <Link to="/" className="acct-back">
-          ← 返回 Ask
-        </Link>
-        <h1>Account settings</h1>
+        <div className="acct-header-left">
+          <h1>Account settings</h1>
+        </div>
       </header>
 
       <div className="acct-layout">
@@ -66,19 +101,6 @@ export default function AccountSettings() {
         <main className="acct-main">
           {tab === 'account' && (
             <div className="acct-section">
-              <div className="acct-section-title">Student Verification</div>
-              <div className="acct-card">
-                <div className="acct-row">
-                  <div>
-                    <div className="acct-row-title">Student Status</div>
-                    <div className="acct-row-sub">
-                      Only .edu emails and specific educational domains are eligible for student verification.
-                    </div>
-                  </div>
-                  <div className="acct-pill muted">Not eligible</div>
-                </div>
-              </div>
-
               <div className="acct-section-title">Profile</div>
               <div className="acct-card">
                 <div className="acct-form-row">
@@ -96,6 +118,37 @@ export default function AccountSettings() {
                 </div>
               </div>
 
+              <div className="acct-section-title">Sign-in methods</div>
+              <div className="acct-card">
+                {loginMethods.map((m) => (
+                  <div key={m.id} className="acct-method-row">
+                    <div className="acct-method-left">
+                      <div
+                        className="acct-method-icon"
+                        style={{
+                          background: m.iconBg,
+                          color: m.iconColor || 'inherit',
+                          border: m.iconBorder || 'none',
+                        }}
+                      >
+                        {m.icon}
+                      </div>
+                      <div className="acct-method-label">{m.label}</div>
+                    </div>
+
+                    <div className="acct-method-right">
+                      <div className="acct-method-value">{m.value}</div>
+                      <button
+                        type="button"
+                        className={`acct-method-action ${m.actionVariant === 'danger' ? 'danger' : ''}`}
+                      >
+                        {m.actionText}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <div className="acct-section-title">Appearance</div>
               <div className="acct-card">
                 <div className="acct-form-row">
@@ -106,25 +159,6 @@ export default function AccountSettings() {
                     <option>Dark</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="acct-section-title">Active Sessions</div>
-              <div className="acct-card">
-                {sessions.map((s) => (
-                  <div key={s.id} className="acct-session-row">
-                    <div className="acct-session-left">
-                      <span className="acct-session-dot" aria-hidden />
-                      <span className="acct-session-name">{s.name}</span>
-                    </div>
-                    <div className="acct-session-right">
-                      <span className="acct-session-time">{s.time}</span>
-                      <button type="button" className="acct-btn subtle">
-                        Revoke
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <div className="acct-hint">Session revocation may take up to 10 minutes to complete.</div>
               </div>
 
               <div className="acct-section-title">More</div>
@@ -145,36 +179,102 @@ export default function AccountSettings() {
             </div>
           )}
 
-          {(tab === 'subscription' || tab === 'usage') && (
+          {tab === 'subscription' && (
             <div className="acct-section">
-              <div className="acct-grid-2">
-                <div className="acct-card">
+              <div className="acct-card">
+                <div className="acct-plan-header">
                   <div className="acct-mini-label">CURRENT PLAN</div>
-                  <div className="acct-plan-title">
-                    Pro <span className="acct-plan-price">$20/mo</span>
-                  </div>
-                  <div className="acct-row-sub">Resets on Apr 16 (14 days)</div>
-                  <button type="button" className="acct-btn subtle" style={{ marginTop: 10 }}>
-                    Adjust plan
+                  <button
+                    type="button"
+                    className="acct-plan-view-btn"
+                    onClick={() => navigate('/account/plans')}
+                  >
+                    View plans
                   </button>
                 </div>
-                <div className="acct-card acct-card-dark">
-                  <div className="acct-mini-label">UPGRADE AVAILABLE</div>
-                  <div className="acct-plan-title">
-                    Pro+ <span className="acct-plan-price">$60/mo</span>
-                  </div>
-                  <div className="acct-row-sub">Unlock 3x more usage on Agent &amp; more</div>
-                  <button type="button" className="acct-btn solid" style={{ marginTop: 10 }}>
-                    Upgrade
-                  </button>
+                <div className="acct-plan-title">
+                  Pro <span className="acct-plan-price">$20/mo</span>
                 </div>
+                <div className="acct-row-sub">Resets on Apr 16 (14 days)</div>
+                <button type="button" className="acct-btn subtle" style={{ marginTop: 10 }}>
+                  Adjust plan
+                </button>
               </div>
 
               <div className="acct-mini-label" style={{ marginTop: 14 }}>
-                Included in Pro
+                Included in Pro. When included tokens are used up, you can purchase extra tokens separately.
               </div>
               <div className="acct-card">
                 <UsageBar value={47} />
+              </div>
+
+              <div className="acct-card acct-usage-history-card">
+                <div className="acct-usage-history-header">
+                  <div className="acct-usage-history-filters">
+                    <button type="button" className="acct-usage-chip">
+                      Mar 05 - Apr 03
+                    </button>
+                    <div className="acct-usage-chip-group">
+                      <button type="button" className="acct-usage-chip ghost">
+                        1d
+                      </button>
+                      <button type="button" className="acct-usage-chip ghost">
+                        7d
+                      </button>
+                      <button type="button" className="acct-usage-chip ghost active">
+                        30d
+                      </button>
+                    </div>
+                  </div>
+                  <button type="button" className="acct-usage-export-btn">
+                    Export CSV
+                  </button>
+                </div>
+
+                <div className="acct-usage-table-wrap">
+                  <table className="acct-usage-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Model</th>
+                        <th>Tokens</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Apr 3, 03:23 PM</td>
+                        <td>Included</td>
+                        <td>auto</td>
+                        <td>0</td>
+                      </tr>
+                      <tr>
+                        <td>Apr 3, 02:42 PM</td>
+                        <td>Included</td>
+                        <td>auto</td>
+                        <td>494.2K</td>
+                      </tr>
+                      <tr>
+                        <td>Apr 3, 02:10 PM</td>
+                        <td>Included</td>
+                        <td>auto</td>
+                        <td>1.4M</td>
+                      </tr>
+                      <tr>
+                        <td>Apr 3, 02:01 PM</td>
+                        <td>Included</td>
+                        <td>auto</td>
+                        <td>791.2K</td>
+                      </tr>
+                      <tr>
+                        <td>Apr 3, 01:49 PM</td>
+                        <td>Included</td>
+                        <td>auto</td>
+                        <td>1.5M</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

@@ -8,9 +8,17 @@ import { useUserDemo } from '../context/UserDemoContext'
 import { useOnboardingTour, TOUR_STEP } from '../context/OnboardingTourContext'
 import { getPersonalizedWelcome } from '../lib/welcomePersonalization'
 import LiteratureRunBlock from './AskLiteratureRun'
+import WorkflowArchitectCanvas from '../components/WorkflowArchitectCanvas'
 import './Ask.css'
 
 const TOOL_OPTIONS = ['Formulate', 'Life Prediction', 'Electrolyte Design', 'Electrode Design']
+
+const WF_ARCH_SUMMARY_STEPS = [
+  { key: 'source', role: 'SOURCE', icon: '🗄', desc: 'Scheduled LIMS fetch of cell test data' },
+  { key: 'processor', role: 'PROCESSOR', icon: '📊', desc: 'Clean & aggregate into an analysis-ready wide table' },
+  { key: 'model', role: 'MODEL', icon: '📈', desc: 'Life Prediction (Predict Skill) inference' },
+  { key: 'output', role: 'OUTPUT', icon: '✉️', desc: 'Daily report generation & push (email / Feishu)' },
+]
 
 // Inline chart for prediction result (Capacity Retention % vs Cycle ID)
 const CHART_W = 480
@@ -604,33 +612,37 @@ function MoleculeCardBlock({ mol, onAddFavorite, showFindSimilar, onFindSimilar 
   const payload = { ...mol.favPayload, addedDate: new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
   return (
     <div className="ask-molecule-card">
-      <div className="ask-mol-left">
-        <div className="ask-mol-structure">{mol.name}</div>
+      <div className="ask-mol-header">
+        <div className="ask-mol-name">{mol.name}</div>
+        <button
+          type="button"
+          className="ask-mol-fav-pill"
+          onClick={() => onAddFavorite(payload)}
+        >
+          + Favorites
+        </button>
       </div>
-      <div className="ask-mol-main">
-        <div className="ask-mol-row ask-mol-smiles">
-          <span className="ask-mol-label">SMILES</span>
-          <span className="ask-mol-value">{mol.smiles}</span>
+
+      <div className="ask-mol-body">
+        <div className="ask-mol-structure-box">
+          <div className="ask-mol-structure-placeholder" />
         </div>
-        <div className="ask-mol-row">
-          <span className="ask-mol-label">Status</span>
-          <span className="ask-mol-status">{mol.status}</span>
-        </div>
-        <div className="ask-mol-row">
-          <span className="ask-mol-label">Property Suitability</span>
-          <span className="ask-mol-score">{mol.propertySuitability}</span>
-        </div>
+
         <div className="ask-mol-grid">
           <div className="ask-mol-grid-item">
-            <div className="ask-mol-k">Molecular Weight</div>
+            <div className="ask-mol-k">SMILES</div>
+            <div className="ask-mol-v mono">{mol.smiles}</div>
+          </div>
+          <div className="ask-mol-grid-item">
+            <div className="ask-mol-k">Mol Weight</div>
             <div className="ask-mol-v">{mol.molWeight}</div>
           </div>
           <div className="ask-mol-grid-item">
-            <div className="ask-mol-k">Predicted Melting Point</div>
+            <div className="ask-mol-k">Predicted MP</div>
             <div className="ask-mol-v">{mol.meltingPoint} ℃</div>
           </div>
           <div className="ask-mol-grid-item">
-            <div className="ask-mol-k">Predicted Boiling Point</div>
+            <div className="ask-mol-k">Predicted BP</div>
             <div className="ask-mol-v">{mol.boilingPoint} ℃</div>
           </div>
           <div className="ask-mol-grid-item">
@@ -650,26 +662,23 @@ function MoleculeCardBlock({ mol, onAddFavorite, showFindSimilar, onFindSimilar 
             <div className="ask-mol-v">{mol.lumo}</div>
           </div>
           <div className="ask-mol-grid-item">
-            <div className="ask-mol-k">ESP Min</div>
-            <div className="ask-mol-v">{mol.espMin}</div>
+            <div className="ask-mol-k">Esp Max</div>
+            <div className="ask-mol-v">{mol.espMax}</div>
           </div>
           <div className="ask-mol-grid-item">
-            <div className="ask-mol-k">ESP Max</div>
-            <div className="ask-mol-v">{mol.espMax}</div>
+            <div className="ask-mol-k">Esp Min</div>
+            <div className="ask-mol-v">{mol.espMin}</div>
           </div>
           <div className="ask-mol-grid-item">
             <div className="ask-mol-k">Commercial Viability</div>
             <div className="ask-mol-v">{mol.commercial}</div>
           </div>
         </div>
-        <p className="ask-mol-desc">{mol.desc}</p>
       </div>
-      <button type="button" className="ask-mol-fav-btn" onClick={() => onAddFavorite(payload)}>
-        ADD TO FAVORITES
-      </button>
+
       {showFindSimilar && (
         <button type="button" className="ask-mol-find-similar-btn" onClick={onFindSimilar}>
-          Find similar
+          FIND SIMILAR
         </button>
       )}
     </div>
@@ -701,6 +710,7 @@ export default function Ask() {
   const [moleculeDrawerOpen, setMoleculeDrawerOpen] = useState(false)
   const [activeMolecule, setActiveMolecule] = useState(null)
   const [similarOpen, setSimilarOpen] = useState(false)
+  const [workflowArchitectOpen, setWorkflowArchitectOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [menuOpenId, setMenuOpenId] = useState(null)
   const [editingId, setEditingId] = useState(null)
@@ -841,6 +851,22 @@ export default function Ask() {
   const isLifePredictionQuestion = (text) => {
     const t = text.toLowerCase()
     return t.includes('life prediction') || t.includes('battery life') || text.includes('电池寿命')
+  }
+
+  const WORKFLOW_ARCHITECT_TRIGGER =
+    '帮我编排一个自动化流程：每天早上自动获取电芯测试数据，清洗汇总后跑寿命预测模型，最后给我出报告。'
+
+  const isWorkflowArchitectIntent = (text) => {
+    const t = text.trim()
+    if (!t) return false
+    if (t === WORKFLOW_ARCHITECT_TRIGGER) return true
+    return (
+      t.includes('编排') &&
+      t.includes('自动化流程') &&
+      (t.includes('电芯') || t.includes('测试数据')) &&
+      t.includes('寿命预测') &&
+      t.includes('报告')
+    )
   }
 
   const appendAssistantMessage = (msg) => {
@@ -1052,10 +1078,23 @@ export default function Ask() {
   }
 
   const isPredictionComparisonRequest = (text) => {
-    const t = text.trim().toLowerCase()
+    const t = (text || '').trim().toLowerCase()
+    const compact = t.replace(/\s+/g, '')
     return (
-      (t.includes('对比') && (t.includes('电芯') || t.includes('demo') || t.includes('分析'))) ||
-      ((t.includes('compare') || t.includes('comparison')) && (t.includes('cell') || t.includes('demo') || t.includes('analysis')))
+      // 中文：对比 demo(1)/demo(2)、电芯、分析，或「对比这两个结果」
+      (t.includes('对比') &&
+        (t.includes('电芯') ||
+          t.includes('demo') ||
+          t.includes('分析') ||
+          compact.includes('对比这两个结果') ||
+          compact.includes('对比两个结果'))) ||
+      // 英文：compare two results / compare these two / comparison analysis
+      ((t.includes('compare') || t.includes('comparison')) &&
+        (t.includes('cell') ||
+          t.includes('demo') ||
+          t.includes('analysis') ||
+          t.includes('two results') ||
+          t.includes('these two')))
     )
   }
 
@@ -1596,6 +1635,37 @@ export default function Ask() {
     appendAssistantMessage(msg)
   }
 
+  const handleWorkflowArchitectActivated = () => {
+    const wfId = `WF-${String(Date.now()).slice(-6)}`
+    addTask({
+      id: wfId,
+      type: 'workflow',
+      category: 'workflows',
+      tool: 'Workflow Architect',
+      title: 'LIMS → Predict → Report (daily 09:00)',
+      meta: 'Workbench · Scheduled',
+      status: 'scheduled',
+      createdAt: Date.now(),
+      userId: 'U-10001',
+    })
+    appendAssistantMessage({
+      id: Date.now() + 2,
+      role: 'assistant',
+      content: null,
+      block: 'workflowArchitectSaved',
+      savedWorkflowId: wfId,
+    })
+  }
+
+  const handleWorkflowArchitectDemo = () => {
+    appendAssistantMessage({
+      id: Date.now() + 1,
+      role: 'assistant',
+      content: null,
+      block: 'workflowArchitect',
+    })
+  }
+
   const handleNewPredictionInfo = () => {
     const userMsg = {
       id: Date.now(),
@@ -1617,8 +1687,10 @@ export default function Ask() {
   }
 
   const isEcQuestion = (text) => {
-    const t = text.trim().toLowerCase()
-    return t === 'ec是什么' || t === 'ec是什麼' || t === 'ec' || t.includes('what is ec')
+    const t = (text || '').toLowerCase()
+    // Remove spaces and common question punctuation so variants like "EC 是什么？" also match
+    const compact = t.replace(/[\s？?]/g, '')
+    return compact === 'ec是什么' || compact === 'ec是什麼' || compact === 'ec' || t.includes('what is ec')
   }
 
   const handleEcDemo = () => {
@@ -1626,7 +1698,7 @@ export default function Ask() {
       id: Date.now(),
       role: 'assistant',
       content: null,
-      block: 'moleculeEc'
+      block: 'moleculeEc',
     }
     appendAssistantMessage(msg)
   }
@@ -1700,8 +1772,8 @@ export default function Ask() {
   }
 
   const buildMDSimCommonAnswer = (questionText) => {
-    const _ = String(questionText || '').trim()
-    return `已理解您的目标：对该配方进行 **MD（分子动力学）模拟评估**，以得到更接近分子尺度的结构与性质线索（例如离子-溶剂相互作用、局域溶剂化与动态稳定性等）。
+    const raw = String(questionText || '').trim()
+    let base = `已理解您的目标：对该配方进行 **MD（分子动力学）模拟评估**，以得到更接近分子尺度的结构与性质线索（例如离子-溶剂相互作用、局域溶剂化与动态稳定性等）。
 
 为了让仿真能顺利进入调度队列，我需要您确认的关键参数主要是：
 
@@ -1710,6 +1782,37 @@ export default function Ask() {
 3. **溶剂体系**：EC / DMC / EMC 的质量比（wt%），且所有溶剂 wt% 总和需为 **100%**
 
 如果您同意，我可以直接帮您进入下一步的仿真参数配置卡片，您只需逐项填写即可。`
+
+    const parsed = parseMDElectrolyteFromText(raw)
+    if (parsed) {
+      const saltLabel = (() => {
+        const a = (parsed.anions || [])[0] || ''
+        if (a.includes('PF6')) return 'LiPF6'
+        if (a.includes('FSI')) return 'LiFSI'
+        if (a.includes('TFSI')) return 'LiTFSI'
+        return 'Li-salt'
+      })()
+
+      const ec = (parsed.solvents || []).find((s) => /ec/i.test(s.name || '') || /ec/i.test(s.smiles || ''))
+      const dmc = (parsed.solvents || []).find((s) => /dmc/i.test(s.name || '') || /dmc/i.test(s.smiles || ''))
+      let ratioLine = ''
+      if (ec && dmc) {
+        const ecPct = Math.round((Number(ec.fraction || 0) || 0) * 100)
+        const dmcPct = Math.round((Number(dmc.fraction || 0) || 0) * 100)
+        if (ecPct > 0 && dmcPct > 0) {
+          ratioLine = `- 溶剂体系（初步解析）：**EC : DMC ≈ ${ecPct} : ${dmcPct}（wt%）**`
+        }
+      }
+
+      const tempK = Number(parsed.temperatureK || 0) || 298.15
+      const saltConc = Number(parsed.totalSaltMolKg || 0) || 1.0
+
+      base += `\n\n---\n\n根据你刚才的问题，我已经尝试从自然语言中解析出一份**初始参数草稿**（后续在表单中仍可修改）：\n\n- 环境设定：**约 ${Math.round(
+        tempK,
+      )} K（室温）**\n- 组分：**${saltConc.toFixed(1)} M ${saltLabel}**\n${ratioLine || ''}`.trimEnd()
+    }
+
+    return base
   }
 
   const handleMDSimSelectionPhase = (questionText) => {
@@ -2334,6 +2437,11 @@ export default function Ask() {
       return
     }
 
+    if (isWorkflowArchitectIntent(userContent)) {
+      handleWorkflowArchitectDemo()
+      return
+    }
+
     if (isLifePredictionQuestion(userContent)) {
       handleLifePredictionDemo()
       return
@@ -2428,16 +2536,9 @@ export default function Ask() {
       navigate('/tasks-data')
       return
     }
-    const mapping = {
-      'Life Prediction': 'Life Prediction',
-      Formulation: 'Formulate',
-      Design: 'Electrolyte Design',
-    }
-    const nextTool = mapping[title]
-    if (nextTool) {
-      setSelectedTool(nextTool)
-      setInput((prev) => applyToolPrefix(prev, nextTool))
-      setTimeout(() => textareaRef.current?.focus(), 0)
+    if (title === 'Life Prediction') {
+      navigate('/workbench/new-life-prediction')
+      return
     }
   }
 
@@ -2670,7 +2771,8 @@ export default function Ask() {
                           msg.block === 'electrolyteDesignThinking' ||
                           msg.block === 'electrolyteDesignResult' ||
                           msg.block === 'stressCorrosionCGRDemo' ||
-                          msg.block === 'lifePrediction'))
+                          msg.block === 'lifePrediction' ||
+                          msg.block === 'workflowArchitect'))
                         ? ' message-content--fit-card'
                         : ''
                     }`}
@@ -2710,6 +2812,73 @@ export default function Ask() {
                           </button>
                         </div>
                       </div>
+                    </div>
+                  )}
+                  {msg.block === 'workflowArchitect' && (
+                    <div className="ask-lit-intro">
+                      <div className="ask-lit-answer-box">
+                        <div
+                          className="ask-markdown"
+                          dangerouslySetInnerHTML={{
+                            __html: marked.parse(
+                              '收到。我已为您规划了一个**「数据-预测-报告」**的自动化闭环。这是初步的逻辑架构图，请您确认。',
+                            ),
+                          }}
+                        />
+                      </div>
+                      <div className="ask-format-card ask-wf-arch-card">
+                        <div className="ask-wf-arch-card-head">
+                          <span className="ask-wf-arch-card-title">流程概要</span>
+                          <span className="ask-wf-arch-card-meta">4 环节 · 自动化链路</span>
+                        </div>
+                        <div className="ask-wf-arch-steps">
+                          {WF_ARCH_SUMMARY_STEPS.map((s, i) => (
+                            <div key={s.key} className="ask-wf-arch-step">
+                              <div className="ask-wf-arch-step-rail">
+                                <span className="ask-wf-arch-step-icon" aria-hidden>
+                                  {s.icon}
+                                </span>
+                                {i < WF_ARCH_SUMMARY_STEPS.length - 1 ? (
+                                  <span className="ask-wf-arch-step-line" aria-hidden />
+                                ) : null}
+                              </div>
+                              <div className="ask-wf-arch-step-main">
+                                <span className="ask-wf-arch-step-role">{s.role}</span>
+                                <p className="ask-wf-arch-step-desc">{s.desc}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="ask-wf-arch-card-foot">
+                          <button
+                            type="button"
+                            className="inline-action-btn ask-wf-arch-btn"
+                            onClick={() => setWorkflowArchitectOpen(true)}
+                          >
+                            进入画布进行微调
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {msg.block === 'workflowArchitectSaved' && (
+                    <div className="ask-wf-saved-card" role="status">
+                      <span className="ask-wf-saved-icon" aria-hidden>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                      </span>
+                      <p className="ask-wf-saved-text">
+                        该工作流已成功保存至{' '}
+                        <button
+                          type="button"
+                          className="ask-wf-saved-link"
+                          onClick={() => navigate('/features-workflows')}
+                        >
+                          Workbench - My Workflows
+                        </button>
+                        ，每天早上 9:00 将准时执行。
+                      </p>
                     </div>
                   )}
                   {msg.block === 'uploadFormat' && (
@@ -4160,20 +4329,19 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                     </>
                   )}
                   {msg.block === 'moleculeEc' && (
-                    <>
+                    <div className="ask-msg-molecule-wrap">
                       <p className="ask-msg-para">
                         EC (ethylene carbonate) is a cyclic organic carbonate widely used as a high‑dielectric constant solvent in Li‑ion
                         battery electrolytes. It helps form a robust SEI on graphite anodes, improves low‑temperature performance, and is
                         usually blended with linear carbonates such as EMC or DMC to tune viscosity and conductivity.
                       </p>
-                      <button
-                        type="button"
-                        className="inline-action-btn"
-                        onClick={handleViewMoleculeCard}
-                      >
-                        查看分子卡片
-                      </button>
-                    </>
+                      <MoleculeCardBlock
+                        mol={EC_MOLECULE}
+                        onAddFavorite={addFavorite}
+                        showFindSimilar
+                        onFindSimilar={handleFindSimilar}
+                      />
+                    </div>
                   )}
                   {msg.block === 'moleculeEcCard' && (
                     <MoleculeCardBlock
@@ -4551,6 +4719,12 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
           </aside>
         </div>
       ) : null}
+
+      <WorkflowArchitectCanvas
+        open={workflowArchitectOpen}
+        onClose={() => setWorkflowArchitectOpen(false)}
+        onActivated={handleWorkflowArchitectActivated}
+      />
     </div>
   )
 }

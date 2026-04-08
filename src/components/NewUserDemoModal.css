@@ -23,9 +23,9 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-primary, #fff);
-  border: 2px solid var(--text-primary, #3c4043);
-  border-radius: 6px;
-  box-shadow: 8px 8px 0 rgba(60, 64, 67, 0.12);
+  border: 1px solid var(--border-light);
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
 }
 
 .new-user-demo-top {
@@ -43,28 +43,27 @@
 
 .new-user-demo-progress {
   display: flex;
-  gap: 6px;
-  height: 5px;
+  gap: 0;
+  height: 4px;
   margin-bottom: 12px;
+  border-radius: 999px;
+  background: var(--bg-tertiary, #f1f3f4);
 }
 
 .new-user-demo-progress-seg {
   flex: 1;
-  border-radius: 2px;
-  background: var(--bg-tertiary, #f1f3f4);
-  border: 1px solid var(--border, #dadce0);
+  border-radius: 999px;
+  background: transparent;
+  border: none;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .new-user-demo-progress-seg.is-active {
   background: var(--accent-muted, rgba(86, 178, 106, 0.25));
-  border-color: var(--accent, #56b26a);
 }
 
 .new-user-demo-progress-seg.is-current {
   background: var(--accent, #56b26a);
-  border-color: var(--text-primary, #3c4043);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .new-user-demo-step-count {
@@ -94,12 +93,11 @@
   flex-shrink: 0;
   padding: 4px 10px;
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--accent, #56b26a);
-  background: var(--accent-muted, rgba(86, 178, 106, 0.12));
-  border: 2px solid var(--text-primary, #3c4043);
-  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--accent, #16a34a);
+  background: rgba(22, 163, 74, 0.08);
+  border-radius: 999px;
 }
 
 .new-user-demo-body {
@@ -144,8 +142,8 @@
   font: inherit;
   color: var(--text-primary, #3c4043);
   background: var(--bg-primary, #fff);
-  border: 2px solid var(--text-primary, #3c4043);
-  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
@@ -158,7 +156,7 @@ button.new-user-demo-card {
 }
 
 .new-user-demo-card:hover {
-  background: var(--bg-secondary, #fafafa);
+  background: var(--bg-secondary, #f9fafb);
 }
 
 .new-user-demo-card:active {
@@ -166,9 +164,9 @@ button.new-user-demo-card {
 }
 
 .new-user-demo-card.is-selected {
-  background: var(--accent-muted, rgba(86, 178, 106, 0.12));
-  border-color: var(--accent, #56b26a);
-  box-shadow: 3px 3px 0 rgba(86, 178, 106, 0.25);
+  background: rgba(22, 163, 74, 0.04);
+  border-color: var(--accent, #16a34a);
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.16);
 }
 
 .new-user-demo-card.is-selected .new-user-demo-svg {
@@ -181,9 +179,8 @@ button.new-user-demo-card {
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: var(--bg-secondary, #fafafa);
-  border: 2px solid var(--border, #dadce0);
-  border-radius: 6px;
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 10px;
   flex-shrink: 0;
 }
 
@@ -211,7 +208,7 @@ button.new-user-demo-card {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid var(--text-primary, #3c4043);
+  border: 1.5px solid var(--border, #d1d5db);
   background: var(--bg-primary, #fff);
   box-sizing: border-box;
   transition:
@@ -220,9 +217,8 @@ button.new-user-demo-card {
 }
 
 .new-user-demo-radio-ring.is-on {
-  border-color: var(--accent, #56b26a);
-  background: var(--accent, #56b26a);
-  box-shadow: inset 0 0 0 3px var(--bg-primary, #fff);
+  border-color: var(--accent, #16a34a);
+  background: radial-gradient(circle at center, var(--accent, #16a34a) 50%, transparent 51%);
 }
 
 .new-user-demo-check-box {
@@ -231,8 +227,8 @@ button.new-user-demo-card {
   justify-content: center;
   width: 22px;
   height: 22px;
-  border: 2px solid var(--text-primary, #3c4043);
-  border-radius: 4px;
+  border: 1.5px solid var(--border, #d1d5db);
+  border-radius: 6px;
   background: var(--bg-primary, #fff);
   font-size: 0.75rem;
   font-weight: 800;
@@ -243,8 +239,8 @@ button.new-user-demo-card {
 }
 
 .new-user-demo-check-box.is-on {
-  border-color: var(--accent, #56b26a);
-  background: var(--accent, #56b26a);
+  border-color: var(--accent, #16a34a);
+  background: var(--accent, #16a34a);
   color: var(--bg-primary, #fff);
 }
 
@@ -283,7 +279,7 @@ button.new-user-demo-card {
   background: none;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-secondary, #5f6368);
+  color: var(--text-secondary, #6b7280);
   cursor: pointer;
   transition: color 0.15s ease;
 }
@@ -293,32 +289,33 @@ button.new-user-demo-card {
 }
 
 .new-user-demo-next {
-  padding: 10px 20px;
+  padding: 9px 18px;
   font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--bg-primary, #fff);
-  background: var(--accent, #56b26a);
-  border: 2px solid var(--text-primary, #3c4043);
-  border-radius: 6px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent, #16a34a);
+  border: none;
+  border-radius: 999px;
   cursor: pointer;
-  box-shadow: 3px 3px 0 var(--text-primary, #3c4043);
+  box-shadow: 0 10px 20px rgba(22, 163, 74, 0.25);
   transition:
     transform 0.1s ease,
     background 0.15s ease,
-    box-shadow 0.1s ease;
+    box-shadow 0.15s ease;
 }
 
 .new-user-demo-next:hover:not(:disabled) {
-  background: var(--accent-hover, #48985a);
+  background: var(--accent-hover, #15803d);
+  box-shadow: 0 14px 30px rgba(22, 163, 74, 0.3);
 }
 
 .new-user-demo-next:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 var(--text-primary, #3c4043);
+  transform: translateY(1px);
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.24);
 }
 
 .new-user-demo-next:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
-  box-shadow: 2px 2px 0 var(--border, #dadce0);
+  box-shadow: none;
 }

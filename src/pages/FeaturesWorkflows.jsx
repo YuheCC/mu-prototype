@@ -11,6 +11,7 @@ const features = [
 
 const workflows = [
   { id: 1, name: 'Daily Data Analysis', desc: 'Automated daily data processing and reports', icon: '📊', href: '/workbench/daily-data-analysis' },
+  { id: 2, name: 'LIMS → Predict → Report', desc: 'Daily fetch, aggregate, life prediction, report (09:00)', icon: '⛓', href: '/workbench/lims-predict-report' },
 ]
 
 const TIME_RANGES = [
@@ -193,7 +194,11 @@ export default function FeaturesWorkflows() {
             <h2 className="section-title">Workflows</h2>
             <p className="section-desc">Your automated workflows</p>
           </div>
-          <button type="button" className="section-manage-btn">
+          <button
+            type="button"
+            className="section-manage-btn"
+            onClick={() => navigate('/workbench/manage-workflows')}
+          >
             Manage workflows
           </button>
         </div>

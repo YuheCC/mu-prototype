@@ -9,6 +9,49 @@
   background: var(--bg-primary);
 }
 
+.ddh-page .page-header {
+  padding: 24px 0 8px;
+}
+
+.ddh-page .page-header-with-back {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ddh-page .page-header h1 {
+  font-size: 1.65rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.ddh-page .page-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 720px;
+}
+
+.ddh-page .page-back-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.ddh-page .page-back-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
 .ddh-section {
   margin-top: 16px;
 }

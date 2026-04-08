@@ -13,7 +13,8 @@ export const DEMO_INTERESTS = [
   { id: 'literature', label: '文献调研与综述' },
 ]
 
-const BASE_CARDS = [
+/** Ask home welcome: only Life Prediction + Recent Tasks */
+const HOME_TOOL_CARDS = [
   {
     title: 'Life Prediction',
     descDefault: 'Run battery life prediction workflow.',
@@ -25,27 +26,6 @@ const BASE_CARDS = [
     icon: '⏱',
   },
   {
-    title: 'Formulation',
-    descDefault: 'Build electrolyte formulation and analyze results.',
-    descByInterest: {
-      formulation: 'Iterate electrolyte recipes and compare property targets.',
-      sse: 'Explore sulfide SSE and electrolyte compatibility in formulations.',
-      md: 'Pair formulation choices with MD-style evaluation prompts.',
-    },
-    tone: 'green',
-    icon: '🧪',
-  },
-  {
-    title: 'Design',
-    descDefault: 'Design electrolyte/electrode and compare candidates.',
-    descByInterest: {
-      md: 'Stress-test candidate structures and interfaces before lab work.',
-      sse: 'Compare solid-electrolyte and coating design trade-offs.',
-    },
-    tone: 'purple',
-    icon: '⚡',
-  },
-  {
     title: 'Recent Tasks',
     descDefault: 'Open your recent tasks and assets.',
     descByInterest: {},
@@ -53,20 +33,6 @@ const BASE_CARDS = [
     icon: '📋',
   },
 ]
-
-const ROLE_CARD_SCORE = {
-  researcher: { 'Life Prediction': 1, Formulation: 3, Design: 2, 'Recent Tasks': 0 },
-  engineer: { 'Life Prediction': 3, Formulation: 3, Design: 2, 'Recent Tasks': 1 },
-  student: { 'Life Prediction': 1, Formulation: 2, Design: 2, 'Recent Tasks': 1 },
-}
-
-const INTEREST_CARD_SCORE = {
-  sse: { Formulation: 3, Design: 2, 'Life Prediction': 1, 'Recent Tasks': 0 },
-  md: { Formulation: 2, Design: 3, 'Life Prediction': 0, 'Recent Tasks': 0 },
-  life: { 'Life Prediction': 4, Formulation: 1, Design: 0, 'Recent Tasks': 1 },
-  formulation: { Formulation: 4, Design: 2, 'Life Prediction': 1, 'Recent Tasks': 0 },
-  literature: { Formulation: 1, Design: 1, 'Life Prediction': 0, 'Recent Tasks': 1 },
-}
 
 /** 文献助手演示示例（命中 Ask 中文献意图） */
 export const LITERATURE_DEMO_PROMPTS = [
@@ -80,6 +46,7 @@ export const LITERATURE_DEMO_PROMPTS = [
  * 首页「推荐问题」：固定 6 条——指定 demo 文案 + 额外模拟问题（均命中 Ask 对应分支）
  */
 export const WELCOME_DEMO_PROMPTS = [
+  'EC 是什么？',
   '锂离子电池的电解质溶剂选择有哪些关键考虑因素？',
   '我想研究硫化物固态电解质在全固态电池中的最新方向',
   '我想预测电池寿命（life prediction），应该怎么开始？',
@@ -91,18 +58,6 @@ export const WELCOME_DEMO_PROMPTS = [
 const DEFAULT_TITLE = 'Welcome to Molecular Universe'
 const DEFAULT_SUBTITLE =
   'Your intelligent assistant for accelerating scientific discovery. How can I assist with your research today?'
-
-function cardScore(title, role, interests) {
-  let s = 0
-  if (role && ROLE_CARD_SCORE[role]) {
-    s += ROLE_CARD_SCORE[role][title] ?? 0
-  }
-  for (const id of interests || []) {
-    const m = INTEREST_CARD_SCORE[id]
-    if (m) s += m[title] ?? 0
-  }
-  return s
-}
 
 function pickDesc(card, interests) {
   let best = null
@@ -123,40 +78,20 @@ function pickDesc(card, interests) {
  * @param {{ role: string, interests: string[] } | null | undefined} profile
  */
 export function getPersonalizedWelcome(profile) {
-  if (!profile?.role || !Array.isArray(profile.interests) || profile.interests.length === 0) {
-    return {
-      toolCards: BASE_CARDS.map((c) => ({
-        title: c.title,
-        desc: c.descDefault,
-        tone: c.tone,
-        icon: c.icon,
-      })),
-      prompts: [...WELCOME_DEMO_PROMPTS],
-      welcomeTitle: DEFAULT_TITLE,
-      welcomeSubtitle: DEFAULT_SUBTITLE,
-    }
-  }
+  const interests = profile?.interests
 
-  const { interests } = profile
-  const role = profile.role === 'pm' ? 'researcher' : profile.role
-
-  const scored = BASE_CARDS.map((c) => ({
-    card: c,
-    score: cardScore(c.title, role, interests),
-  }))
-  scored.sort((a, b) => b.score - a.score)
-
-  const toolCards = scored.map(({ card }) => ({
+  const toolCards = HOME_TOOL_CARDS.map((card) => ({
     title: card.title,
-    desc: pickDesc(card, interests),
+    desc:
+      interests && interests.length > 0 ? pickDesc(card, interests) : card.descDefault,
     tone: card.tone,
     icon: card.icon,
   }))
 
-  const prompts = [...WELCOME_DEMO_PROMPTS]
-
-  const welcomeTitle = DEFAULT_TITLE
-  const welcomeSubtitle = DEFAULT_SUBTITLE
-
-  return { toolCards, prompts, welcomeTitle, welcomeSubtitle }
+  return {
+    toolCards,
+    prompts: [...WELCOME_DEMO_PROMPTS],
+    welcomeTitle: DEFAULT_TITLE,
+    welcomeSubtitle: DEFAULT_SUBTITLE,
+  }
 }
