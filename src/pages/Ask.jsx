@@ -9,7 +9,27 @@ import { useOnboardingTour, TOUR_STEP } from '../context/OnboardingTourContext'
 import { getPersonalizedWelcome } from '../lib/welcomePersonalization'
 import LiteratureRunBlock from './AskLiteratureRun'
 import WorkflowArchitectCanvas from '../components/WorkflowArchitectCanvas'
+import {
+  ASSET_CATEGORY,
+  getMergedAssetTasks,
+  getTaskFeatureLabel,
+  getTaskStatusLabel,
+  normalizeTaskStatus,
+  formatCreatedAtDisplay,
+  getTaskCreatedAtMs,
+} from './TasksData/assetTasks'
 import './Ask.css'
+
+function collectTaskIdsFromMessages(messages) {
+  const ids = new Set()
+  if (!Array.isArray(messages)) return ids
+  for (const m of messages) {
+    if (m?.taskId) ids.add(String(m.taskId))
+    if (m?.assetTaskId) ids.add(String(m.assetTaskId))
+    if (m?.savedWorkflowId) ids.add(String(m.savedWorkflowId))
+  }
+  return ids
+}
 
 const TOOL_OPTIONS = ['Formulate', 'Life Prediction', 'Electrolyte Design', 'Electrode Design']
 
@@ -337,6 +357,121 @@ const SIMILAR_MOLECULES = [
   }
 ]
 
+const DTD_SIMILAR_MOLECULES = [
+  {
+    name: 'PLS',
+    smiles: 'O=S1(=O)OCC=C1',
+    status: 'Predicted',
+    propertySuitability: '8.64/10',
+    molWeight: '138.14 g/mol',
+    meltingPoint: '18.0',
+    boilingPoint: '238.0',
+    flashPoint: '102.0',
+    combEnthalpy: '-14.4 eV',
+    homo: '-8.31 eV',
+    lumo: '0.39 eV',
+    espMin: '-1.58 eV',
+    espMax: '1.62 eV',
+    commercial: 'Pilot-scale available',
+    desc: 'PLS is prioritized as a DTD-alternative candidate with strong SEI-forming potential under high-temperature cycling.',
+    favPayload: { smiles: 'O=S1(=O)OCC=C1', molWeight: 138.14, homo: -8.31, lumo: 0.39, combEnthalpy: -14.4, commercial: 'Pilot-scale available', espMin: -1.58, espMax: 1.62, funcGroups: ['Sulfite', 'SEI-forming'], umapX: 0.22, umapY: -0.14, addedDate: '' }
+  },
+  {
+    name: 'TTSPi',
+    smiles: 'O=P(OCC)(OCC)SCC',
+    status: 'Predicted',
+    propertySuitability: '8.41/10',
+    molWeight: '214.26 g/mol',
+    meltingPoint: '-8.0',
+    boilingPoint: '286.0',
+    flashPoint: '121.0',
+    combEnthalpy: '-13.9 eV',
+    homo: '-8.12 eV',
+    lumo: '0.46 eV',
+    espMin: '-1.47 eV',
+    espMax: '1.55 eV',
+    commercial: 'Lab-scale available',
+    desc: 'TTSPi is retained as a cathode-interface stabilizer candidate for high-Ni positive electrodes in hot-cycle scenarios.',
+    favPayload: { smiles: 'O=P(OCC)(OCC)SCC', molWeight: 214.26, homo: -8.12, lumo: 0.46, combEnthalpy: -13.9, commercial: 'Lab-scale available', espMin: -1.47, espMax: 1.55, funcGroups: ['Phosphite', 'Cathode-stabilizing'], umapX: 0.34, umapY: 0.03, addedDate: '' }
+  },
+  {
+    name: '1,3-BS',
+    smiles: 'O=S1(=O)OCCCO1',
+    status: 'Predicted',
+    propertySuitability: '8.03/10',
+    molWeight: '154.16 g/mol',
+    meltingPoint: '12.0',
+    boilingPoint: '252.0',
+    flashPoint: '108.0',
+    combEnthalpy: '-14.0 eV',
+    homo: '-8.05 eV',
+    lumo: '0.44 eV',
+    espMin: '-1.42 eV',
+    espMax: '1.51 eV',
+    commercial: 'Commercially available',
+    desc: '1,3-BS is a near-neighbor replacement route for DTD and is suitable for side-by-side validation.',
+    favPayload: { smiles: 'O=S1(=O)OCCCO1', molWeight: 154.16, homo: -8.05, lumo: 0.44, combEnthalpy: -14.0, commercial: 'Commercially available', espMin: -1.42, espMax: 1.51, funcGroups: ['Sultone', 'Additive'], umapX: 0.11, umapY: 0.17, addedDate: '' }
+  },
+]
+
+/** 与 PS（1,3-丙烷磺内酯）结构/功能相近的 demo 候选（快充 NCM811/石墨） */
+const PS_SIMILAR_MOLECULES = [
+  {
+    name: '1,3-BS',
+    smiles: 'O=S1(=O)OCCCO1',
+    status: 'Predicted',
+    propertySuitability: '8.72/10',
+    molWeight: '154.16 g/mol',
+    meltingPoint: '12.0',
+    boilingPoint: '252.0',
+    flashPoint: '108.0',
+    combEnthalpy: '-14.0 eV',
+    homo: '-8.05 eV',
+    lumo: '0.44 eV',
+    espMin: '-1.42 eV',
+    espMax: '1.51 eV',
+    commercial: 'Commercially available',
+    desc: '1,3-butane sultone is a common PS homolog; often used as a baseline for sulfone-type SEI chemistry under high-rate lithiation.',
+    favPayload: { smiles: 'O=S1(=O)OCCCO1', molWeight: 154.16, homo: -8.05, lumo: 0.44, combEnthalpy: -14.0, commercial: 'Commercially available', espMin: -1.42, espMax: 1.51, funcGroups: ['Sultone', 'SEI-forming'], umapX: 0.09, umapY: 0.15, addedDate: '' }
+  },
+  {
+    name: 'Ethylene sulfite',
+    smiles: 'O=S1OCCO1',
+    status: 'Predicted',
+    propertySuitability: '8.38/10',
+    molWeight: '110.11 g/mol',
+    meltingPoint: '-11.0',
+    boilingPoint: '158.0',
+    flashPoint: '48.0',
+    combEnthalpy: '-13.6 eV',
+    homo: '-8.22 eV',
+    lumo: '0.52 eV',
+    espMin: '-1.39 eV',
+    espMax: '1.49 eV',
+    commercial: 'Commercially available',
+    desc: 'Cyclic sulfite in the same “sulfur–oxygen heterocycle” family as PS; often evaluated alongside sultones for graphite SEI under rate.',
+    favPayload: { smiles: 'O=S1OCCO1', molWeight: 110.11, homo: -8.22, lumo: 0.52, combEnthalpy: -13.6, commercial: 'Commercially available', espMin: -1.39, espMax: 1.49, funcGroups: ['Sulfite', 'SEI-forming'], umapX: 0.12, umapY: 0.06, addedDate: '' }
+  },
+  {
+    name: 'PLS',
+    smiles: 'O=S1(=O)OCC=C1',
+    status: 'Predicted',
+    propertySuitability: '8.21/10',
+    molWeight: '138.14 g/mol',
+    meltingPoint: '18.0',
+    boilingPoint: '238.0',
+    flashPoint: '102.0',
+    combEnthalpy: '-14.4 eV',
+    homo: '-8.31 eV',
+    lumo: '0.39 eV',
+    espMin: '-1.58 eV',
+    espMax: '1.62 eV',
+    commercial: 'Pilot-scale available',
+    desc: 'PLS (prop-1-ene-1,3-sultite) is retained as an unsaturated sultone-like candidate for fast-charge graphite interphase tuning.',
+    favPayload: { smiles: 'O=S1(=O)OCC=C1', molWeight: 138.14, homo: -8.31, lumo: 0.39, combEnthalpy: -14.4, commercial: 'Pilot-scale available', espMin: -1.58, espMax: 1.62, funcGroups: ['Sulfite', 'SEI-forming'], umapX: 0.2, umapY: -0.1, addedDate: '' }
+  },
+]
+
 const MOLECULE_INDEX = (() => {
   const dec = {
     name: 'DEC',
@@ -380,6 +515,34 @@ const MOLECULE_INDEX = (() => {
 })()
 
 const ELECTROLYTE_SOLVENT_DEMO_Q = '锂离子电池的电解质溶剂选择有哪些关键考虑因素？'
+const FAST_CHARGE_COMPLEX_DEMO_KEYWORDS = [
+  'ncm811',
+  '硅碳',
+  '替代',
+  'dtd',
+  '高温',
+  '循环稳定',
+]
+
+/** 与 PS 快充替代 demo 匹配：需同时包含体系、溶剂、PS 相关表述与快充语境（与 DTD 高温 demo 关键词互不重叠） */
+const isPsFastChargeDemoIntent = (text) => {
+  const raw = String(text || '')
+  const t = raw.toLowerCase()
+  if (!t) return false
+  const hasPsSeed = t.includes('ps') || raw.includes('磺内酯') || raw.includes('丙烷磺')
+  const hasReplace = t.includes('替代') || t.includes('代替')
+  const hasFast = t.includes('快充') || t.includes('倍率') || t.includes('高倍率')
+  return (
+    hasPsSeed &&
+    hasReplace &&
+    hasFast &&
+    t.includes('ncm811') &&
+    t.includes('石墨') &&
+    (t.includes('lipf6') || t.includes('1.2')) &&
+    t.includes('ec') &&
+    t.includes('emc')
+  )
+}
 
 /** name：体系名称；remark：「-」后的卡片备注（展示时与名称分行） */
 const ELECTROLYTE_DESIGN_SYSTEMS = [
@@ -687,7 +850,7 @@ function MoleculeCardBlock({ mol, onAddFavorite, showFindSimilar, onFindSimilar 
 
 export default function Ask() {
   const navigate = useNavigate()
-  const { addTask } = useTasks()
+  const { addTask, tasks } = useTasks()
   const { addFavorite } = useFavorites()
   const {
     conversations,
@@ -717,6 +880,8 @@ export default function Ask() {
   const [editTitle, setEditTitle] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [taskListPanelOpen, setTaskListPanelOpen] = useState(false)
+  const [taskPanelDetailTask, setTaskPanelDetailTask] = useState(null)
   const messagesEndRef = useRef(null)
   const uploadInputRef = useRef(null)
   const overlayRef = useRef(null)
@@ -746,6 +911,59 @@ export default function Ask() {
     }, 0)
     return Math.max(0, Math.round(chars / 4))
   }
+
+  const conversationTasks = useMemo(() => {
+    const merged = getMergedAssetTasks(tasks)
+    const idFromMessages = collectTaskIdsFromMessages(messages)
+    const out = []
+    const seen = new Set()
+    for (const t of merged) {
+      const id = String(t.id)
+      const match = t.askConversationId === currentId || idFromMessages.has(id)
+      if (match && !seen.has(id)) {
+        seen.add(id)
+        out.push(t)
+      }
+    }
+    out.sort((a, b) => (getTaskCreatedAtMs(b) ?? 0) - (getTaskCreatedAtMs(a) ?? 0))
+    return out
+  }, [tasks, currentId, messages])
+
+  useEffect(() => {
+    setTaskListPanelOpen(false)
+    setTaskPanelDetailTask(null)
+  }, [currentId])
+
+  useEffect(() => {
+    if (!taskListPanelOpen) {
+      setTaskPanelDetailTask(null)
+    }
+  }, [taskListPanelOpen])
+
+  useEffect(() => {
+    if (!taskListPanelOpen) return
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      if (taskPanelDetailTask) setTaskPanelDetailTask(null)
+      else setTaskListPanelOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [taskListPanelOpen, taskPanelDetailTask])
+
+  const mdSimDetailMessage = useMemo(() => {
+    if (!taskPanelDetailTask || taskPanelDetailTask.askInlineDetail !== 'mdSim') return null
+    const tid = String(taskPanelDetailTask.id)
+    return (
+      messages.find(
+        (m) =>
+          m.role === 'assistant' &&
+          m.block === 'mdSimForm' &&
+          m.submitted &&
+          String(m.taskId || '') === tid
+      ) || null
+    )
+  }, [taskPanelDetailTask, messages])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -963,7 +1181,7 @@ export default function Ask() {
     return { barcode: 'demo', cycleLife: 3114 }
   }
 
-  const createPredictionTask = (fileName) => {
+  const createPredictionTask = (fileName, askConversationId) => {
     const id = `PR-${String(Date.now()).slice(-3)}`
     const now = new Date()
     const prediction = getMockPredictionByFileName(fileName)
@@ -981,7 +1199,8 @@ export default function Ask() {
       batteryCount: 1,
       barcode: prediction.barcode,
       cycleLife: prediction.cycleLife,
-      status: 'done'
+      status: 'done',
+      askConversationId,
     })
     return { taskId: id, fileName: fileName || 'data.csv', ...prediction }
   }
@@ -1039,7 +1258,7 @@ export default function Ask() {
     const conv = conversations.find(c => c.id === currentId) || conversations[0]
     const lastPreview = [...conv.messages].reverse().find(m => m.block === 'uploadPreview')
     const fileName = lastPreview?.fileName
-    const predictionMeta = createPredictionTask(fileName)
+    const predictionMeta = createPredictionTask(fileName, currentId)
     const convId = currentId
 
     const userMsg = { id: Date.now(), role: 'user', content: String(cycles) }
@@ -1188,6 +1407,12 @@ export default function Ask() {
       text.includes('应力腐蚀裂纹扩展速率预测') ||
       (t.includes('stress corrosion') && (t.includes('cgr') || t.includes('crack growth')))
     )
+  }
+
+  const isFastChargeComplexDemoIntent = (text) => {
+    const t = String(text || '').toLowerCase()
+    if (!t) return false
+    return FAST_CHARGE_COMPLEX_DEMO_KEYWORDS.every((k) => t.includes(k))
   }
 
   const SULFIDE_LITERATURE_FOLLOWUPS = [
@@ -1647,6 +1872,7 @@ export default function Ask() {
       status: 'scheduled',
       createdAt: Date.now(),
       userId: 'U-10001',
+      askConversationId: currentId,
     })
     appendAssistantMessage({
       id: Date.now() + 2,
@@ -1693,12 +1919,42 @@ export default function Ask() {
     return compact === 'ec是什么' || compact === 'ec是什麼' || compact === 'ec' || t.includes('what is ec')
   }
 
-  const handleEcDemo = () => {
+  const handleEcDemo = (queryText) => {
+    const safeQuery = String(queryText || '').trim() || 'EC'
+    const taskId = `MS-${String(Date.now()).slice(-6)}`
+    const now = Date.now()
+    const abbrev =
+      safeQuery.replace(/\s+/g, ' ').length > 16
+        ? `${safeQuery.replace(/\s+/g, ' ').slice(0, 16)}…`
+        : safeQuery.replace(/\s+/g, ' ')
+    const listTitle = `Mol · ${abbrev}`
+    const moleculePayload = {
+      ...EC_MOLECULE,
+      favPayload: { ...EC_MOLECULE.favPayload },
+    }
+    addTask({
+      id: taskId,
+      type: 'moleculeSearch',
+      category: ASSET_CATEGORY.moleculeSearch,
+      tool: 'Molecule Search',
+      title: `Molecule Search · ${EC_MOLECULE.name}`,
+      listTitle,
+      queryText: safeQuery,
+      status: 'done',
+      meta: 'Ask · Skill result',
+      createdAt: now,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      molecule: moleculePayload,
+    })
     const msg = {
       id: Date.now(),
       role: 'assistant',
       content: null,
       block: 'moleculeEc',
+      taskId,
+      moleculeSearchSkill: true,
+      skillQueryText: safeQuery,
     }
     appendAssistantMessage(msg)
   }
@@ -1719,12 +1975,37 @@ export default function Ask() {
   }
 
   const handleFindSimilar = () => {
-    const userMsg = { id: Date.now(), role: 'user', content: 'find similar' }
+    const baseTs = Date.now()
+    const taskId = `MS-sim-${baseTs}`
+    const molecules = SIMILAR_MOLECULES.map((mol) => ({
+      ...mol,
+      favPayload: { ...mol.favPayload },
+    }))
+    const namesJoined = SIMILAR_MOLECULES.map((m) => m.name).join(', ')
+    addTask({
+      id: taskId,
+      type: 'moleculeSearch',
+      category: ASSET_CATEGORY.moleculeSearch,
+      tool: 'Molecule Search',
+      title: `Similar to EC · ${namesJoined}`,
+      listTitle: `Sim · EC (${molecules.length})`,
+      queryText: 'Find similar to EC',
+      meta: 'Ask · Similar results',
+      status: 'done',
+      createdAt: baseTs,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      molecules,
+      molecule: molecules[0],
+      similarToLabel: 'EC',
+    })
+    const userMsg = { id: baseTs, role: 'user', content: 'find similar' }
     const assistantMsg = {
-      id: Date.now() + 1,
+      id: baseTs + 1,
       role: 'assistant',
       content: null,
-      block: 'similarMolecules'
+      block: 'similarMolecules',
+      taskId,
     }
     updateConversation(currentId, c => ({
       ...c,
@@ -2078,6 +2359,718 @@ export default function Ask() {
     })
   }
 
+  const handleComplexRoadmapToggle = (msgId) => {
+    skipNextAutoScrollRef.current = true
+    updateMessageById(currentId, msgId, (m) => ({ ...m, roadmapExpanded: !m.roadmapExpanded }))
+  }
+
+  const handleComplexPipelineCollapse = (msgId) => {
+    skipNextAutoScrollRef.current = true
+    updateMessageById(currentId, msgId, (m) => ({ ...m, pipelineCollapsed: !m.pipelineCollapsed }))
+  }
+
+  const handleComplexPipelineStepDetail = (msgId, stepIdx) => {
+    skipNextAutoScrollRef.current = true
+    updateMessageById(currentId, msgId, (m) => ({
+      ...m,
+      pipelineSteps: (m.pipelineSteps || []).map((s, i) => (i === stepIdx ? { ...s, expanded: !s.expanded } : s)),
+    }))
+  }
+
+  const handleComplexExecutionOpenTask = (kind, demoVariant = 'dtd') => {
+    const merged = getMergedAssetTasks(tasks)
+    const scoped = merged
+      .filter((t) => t.askConversationId === currentId)
+      .sort((a, b) => (getTaskCreatedAtMs(b) ?? 0) - (getTaskCreatedAtMs(a) ?? 0))
+    const wantPs = demoVariant === 'ps'
+    const target =
+      kind === 'molecule'
+        ? scoped.find((t) => t.type === 'moleculeSearch' && String(t.similarToLabel || '').toUpperCase() === (wantPs ? 'PS' : 'DTD'))
+        : scoped.find((t) => {
+            if (t.askInlineDetail !== 'electrolyteDesign') return false
+            const title = String(t.title || '')
+            return wantPs ? title.includes('PS') : title.includes('DTD')
+          })
+    if (!target) return
+    setTaskListPanelOpen(true)
+    setTaskPanelDetailTask(target)
+  }
+
+  const triggerDownload = (fileName, mimeType, content) => {
+    try {
+      const blob = new Blob([content], { type: mimeType })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (e) {
+      // no-op for demo
+    }
+  }
+
+  const handleQuickUserReply = (text) => {
+    const t = String(text || '').trim()
+    if (!t) return
+    updateConversation(currentId, (c) => ({
+      ...c,
+      isDraft: false,
+      messages: [...c.messages, { id: Date.now(), role: 'user', content: t }],
+    }))
+  }
+
+  const handleComplexDemoChoiceReply = (choiceText, demoVariant = 'dtd') => {
+    const text = String(choiceText || '').trim()
+    if (!text) return
+    handleQuickUserReply(text)
+    if (text === '直接给出完整结果和报告') {
+      setTimeout(() => {
+        if (demoVariant === 'ps') handlePsComplexDirectReportRun()
+        else handleComplexDirectReportRun()
+      }, 220)
+    }
+  }
+
+  const handleComplexDirectReportRun = () => {
+    const now = Date.now()
+    const taskId = `MS-dtd-${String(now).slice(-6)}`
+    const edTaskId = `ED-dtd-${String(now).slice(-6)}`
+    const dtdCandidates = DTD_SIMILAR_MOLECULES.map((mol) => ({
+      ...mol,
+      favPayload: { ...mol.favPayload },
+    }))
+    addTask({
+      id: taskId,
+      type: 'moleculeSearch',
+      category: ASSET_CATEGORY.moleculeSearch,
+      tool: 'Molecule Search',
+      title: `Similar to DTD · ${dtdCandidates.map((m) => m.name).join(', ')}`,
+      listTitle: `Sim · DTD (${dtdCandidates.length})`,
+      queryText: 'Find similar to DTD',
+      meta: 'Ask · DTD similar results',
+      status: 'done',
+      createdAt: now,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      molecules: dtdCandidates,
+      molecule: dtdCandidates[0],
+      similarToLabel: 'DTD',
+    })
+    addTask({
+      id: edTaskId,
+      type: 'asset',
+      category: ASSET_CATEGORY.electrolyteDesign,
+      tool: 'Electrolyte Design',
+      title: 'Electrolyte Design · DTD 对比评估（PLS+TTSPi / BS+TTSPi / PLS / BS）',
+      listTitle: 'ED · vs DTD (4)',
+      queryText: 'Compare PLS+TTSPi, BS+TTSPi, PLS, BS against DTD',
+      meta: 'Ask · Electrolyte comparison',
+      status: 'done',
+      createdAt: now + 1,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      askInlineDetail: 'electrolyteDesign',
+      edComparisons: [
+        {
+          id: 'task1',
+          title: 'Task 1 · PLS + TTSPi vs DTD',
+          baseline: 'DTD',
+          candidate: 'PLS + TTSPi',
+          wtPercent: '1.0%',
+          metrics: {
+            perf25CycleLifeDrop: '4.82%',
+            perf25RateDrop: '0.31%',
+            perf45CycleLifeDrop: '5.27%',
+          },
+        },
+        {
+          id: 'task2',
+          title: 'Task 2 · BS + TTSPi vs DTD',
+          baseline: 'DTD',
+          candidate: 'BS + TTSPi',
+          wtPercent: '1.0%',
+          metrics: {
+            perf25CycleLifeDrop: '5.36%',
+            perf25RateDrop: '0.38%',
+            perf45CycleLifeDrop: '6.02%',
+          },
+        },
+        {
+          id: 'task3',
+          title: 'Task 3 · PLS vs DTD',
+          baseline: 'DTD',
+          candidate: 'PLS',
+          wtPercent: '1.0%',
+          metrics: {
+            perf25CycleLifeDrop: '9.19%',
+            perf25RateDrop: '0.64%',
+            perf45CycleLifeDrop: '9.59%',
+          },
+        },
+        {
+          id: 'task4',
+          title: 'Task 4 · BS vs DTD',
+          baseline: 'DTD',
+          candidate: 'BS',
+          wtPercent: '1.0%',
+          metrics: {
+            perf25CycleLifeDrop: '10.11%',
+            perf25RateDrop: '0.72%',
+            perf45CycleLifeDrop: '10.84%',
+          },
+        },
+      ],
+    })
+
+    const streamLogs = [
+      {
+        title: '正在开始执行分析流程…',
+        body: ['将基于候选分子筛选与配方评估，生成适用于高温循环场景的替代方案。'],
+      },
+      {
+        title: '正在检索候选分子…',
+        body: ['已从内部电池分子数据库中筛选出一批与 DTD 结构或功能相近的候选添加剂，用于后续分析。'],
+      },
+      {
+        title: '正在进行候选筛选…',
+        body: [
+          '当前重点保留具备以下特征的候选分子：',
+          '>> 具备负极成膜能力或界面调控能力',
+          '>> 在高温条件下具有较好的稳定性潜力',
+          '>> 在类似电解液体系中存在应用基础',
+        ],
+      },
+      {
+        title: '正在构建配方并评估表现…',
+        body: [
+          '已将候选分子加入目标电解液体系，并对不同添加剂组合与比例进行对比分析，重点评估其在 45–60℃高温循环场景下的表现差异。',
+        ],
+      },
+      {
+        title: '正在收敛方案路径…',
+        body: ['初步结果显示：单一添加剂难以同时覆盖所有性能目标，更优路径倾向于通过不同功能添加剂的组合来实现性能平衡。'],
+      },
+      {
+        title: '正在生成最终结果与实验建议…',
+        body: [],
+      },
+    ]
+    const pipelineSteps = streamLogs.map((section, idx) => ({
+      headline: section.title,
+      items: section.body,
+      detail: '',
+      streaming: idx === 0,
+      expanded: false,
+      visibleItems: 0,
+      visible: idx === 0,
+    }))
+    const msgId = Date.now() + 1
+    appendAssistantMessage({
+      id: msgId,
+      role: 'assistant',
+      block: 'complexFastChargeExecution',
+      content: streamLogs[0].title,
+      taskId,
+      thinkingDone: false,
+      pipelineCollapsed: false,
+      pipelineSteps,
+      showPlanCard: false,
+    })
+
+    const revealQueue = streamLogs.flatMap((section, sectionIdx) =>
+      (section.body || []).map((_, itemIdx) => ({
+        sectionIdx,
+        visibleItems: itemIdx + 1,
+      }))
+    )
+
+    revealQueue.forEach((entry, idx) => {
+      setTimeout(() => {
+        const isSectionDone = entry.visibleItems >= (streamLogs[entry.sectionIdx]?.body?.length || 0)
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === entry.sectionIdx,
+            expanded: i === entry.sectionIdx ? true : s.expanded,
+            visibleItems: i === entry.sectionIdx ? Math.max(Number(s.visibleItems || 0), entry.visibleItems) : s.visibleItems,
+            visible: i <= entry.sectionIdx || (isSectionDone && i === entry.sectionIdx + 1) ? true : s.visible,
+          })),
+        }))
+      }, 520 * (idx + 1))
+    })
+
+    setTimeout(() => {
+      updateMessageById(currentId, msgId, (m) => ({
+        ...m,
+        thinkingDone: true,
+        content: '执行流程已完成，正在整理完整结果与报告。',
+        pipelineCollapsed: true,
+        pipelineSteps: (m.pipelineSteps || []).map((s) => ({ ...s, streaming: false })),
+      }))
+    }, 520 * (revealQueue.length + 1))
+  }
+
+  const handlePsComplexDirectReportRun = () => {
+    const now = Date.now()
+    const taskId = `MS-ps-${String(now).slice(-6)}`
+    const edTaskId = `ED-ps-${String(now).slice(-6)}`
+    const psCandidates = PS_SIMILAR_MOLECULES.map((mol) => ({
+      ...mol,
+      favPayload: { ...mol.favPayload },
+    }))
+    addTask({
+      id: taskId,
+      type: 'moleculeSearch',
+      category: ASSET_CATEGORY.moleculeSearch,
+      tool: 'Molecule Search',
+      title: `Similar to PS · ${psCandidates.map((m) => m.name).join(', ')}`,
+      listTitle: `Sim · PS (${psCandidates.length})`,
+      queryText: 'Find similar to PS (1,3-propane sultone)',
+      meta: 'Ask · PS similar results',
+      status: 'done',
+      createdAt: now,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      molecules: psCandidates,
+      molecule: psCandidates[0],
+      similarToLabel: 'PS',
+    })
+    addTask({
+      id: edTaskId,
+      type: 'asset',
+      category: ASSET_CATEGORY.electrolyteDesign,
+      tool: 'Electrolyte Design',
+      title: 'Electrolyte Design · PS 对比（NCM811/石墨，1.2M LiPF6 EC/EMC 3:7，1%/2%/5%）',
+      listTitle: 'ED · vs PS (fast charge)',
+      queryText: 'Compare 1,3-BS / Ethylene sulfite / PLS vs PS at 1%, 2%, 5% wt',
+      meta: 'Ask · Electrolyte comparison (PS replacement)',
+      status: 'done',
+      createdAt: now + 1,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      askInlineDetail: 'electrolyteDesign',
+      edComparisons: [
+        {
+          id: 'ps-t1',
+          title: 'Task · 1,3-BS 1% vs PS 1%（快充工况）',
+          baseline: 'PS',
+          candidate: '1,3-BS',
+          wtPercent: '1.0%',
+          metrics: { perf25CycleLifeDrop: '3.9%', perf25RateDrop: '0.28%', perf45CycleLifeDrop: '4.6%' },
+        },
+        {
+          id: 'ps-t2',
+          title: 'Task · 1,3-BS 2% vs PS 2%（快充工况）',
+          baseline: 'PS',
+          candidate: '1,3-BS',
+          wtPercent: '2.0%',
+          metrics: { perf25CycleLifeDrop: '3.4%', perf25RateDrop: '0.22%', perf45CycleLifeDrop: '4.1%' },
+        },
+        {
+          id: 'ps-t3',
+          title: 'Task · Ethylene sulfite 2% vs PS 2%',
+          baseline: 'PS',
+          candidate: 'Ethylene sulfite',
+          wtPercent: '2.0%',
+          metrics: { perf25CycleLifeDrop: '5.1%', perf25RateDrop: '0.41%', perf45CycleLifeDrop: '5.8%' },
+        },
+        {
+          id: 'ps-t4',
+          title: 'Task · PLS 2% vs PS 2%',
+          baseline: 'PS',
+          candidate: 'PLS',
+          wtPercent: '2.0%',
+          metrics: { perf25CycleLifeDrop: '4.4%', perf25RateDrop: '0.35%', perf45CycleLifeDrop: '5.0%' },
+        },
+        {
+          id: 'ps-t5',
+          title: 'Task · 1,3-BS 5% vs PS 5%（高负载）',
+          baseline: 'PS',
+          candidate: '1,3-BS',
+          wtPercent: '5.0%',
+          metrics: { perf25CycleLifeDrop: '4.8%', perf25RateDrop: '0.31%', perf45CycleLifeDrop: '5.5%' },
+        },
+        {
+          id: 'ps-t6',
+          title: 'Task · PLS 5% vs PS 5%（高负载）',
+          baseline: 'PS',
+          candidate: 'PLS',
+          wtPercent: '5.0%',
+          metrics: { perf25CycleLifeDrop: '6.2%', perf25RateDrop: '0.48%', perf45CycleLifeDrop: '7.1%' },
+        },
+      ],
+    })
+
+    const streamLogs = [
+      {
+        title: '正在开始执行分析流程…',
+        body: ['将基于与 PS 结构相近的候选添加剂，在 NCM811/石墨快充体系下完成筛选与多浓度配方评估。'],
+      },
+      {
+        title: '正在检索候选分子…',
+        body: ['已从内部电池分子数据库中筛出一批与 1,3-丙烷磺内酯（PS）结构或成膜化学相近的候选，用于后续快充相关指标评估。'],
+      },
+      {
+        title: '正在进行候选筛选…',
+        body: [
+          '当前重点保留具备以下特征的候选分子：',
+          '>> 环状磺内酯/亚硫酸酯类或近邻骨架，便于与 PS 做对照',
+          '>> 在 EC/EMC 碳酸酯体系中溶解性与副反应风险可接受',
+          '>> 预期对高倍率下的极化与倍率保持有可量化差异',
+        ],
+      },
+      {
+        title: '正在构建配方并评估表现…',
+        body: [
+          '基础电解液：1.2 M LiPF6，EC/EMC（3:7）。在 PS 对照基础上，对候选添加剂分别尝试 1%、2%、5%（wt）多档浓度，并评估快充相关表现（极化、倍率保持、循环稳定性）。',
+        ],
+      },
+      {
+        title: '正在收敛方案路径…',
+        body: ['综合 1%/2%/5% 梯度结果：单一候选在极低负载下倍率更优但在循环上偏软；中等负载下 1,3-BS 与 PS 的折中最佳。'],
+      },
+      {
+        title: '正在生成最终结果与实验建议…',
+        body: [],
+      },
+    ]
+    const pipelineSteps = streamLogs.map((section, idx) => ({
+      headline: section.title,
+      items: section.body,
+      detail: '',
+      streaming: idx === 0,
+      expanded: false,
+      visibleItems: 0,
+      visible: idx === 0,
+    }))
+    const msgId = Date.now() + 1
+    appendAssistantMessage({
+      id: msgId,
+      role: 'assistant',
+      block: 'complexPsFastChargeExecution',
+      content: streamLogs[0].title,
+      taskId,
+      thinkingDone: false,
+      pipelineCollapsed: false,
+      pipelineSteps,
+      showPlanCard: false,
+    })
+
+    const revealQueue = streamLogs.flatMap((section, sectionIdx) =>
+      (section.body || []).map((_, itemIdx) => ({
+        sectionIdx,
+        visibleItems: itemIdx + 1,
+      }))
+    )
+
+    revealQueue.forEach((entry, idx) => {
+      setTimeout(() => {
+        const isSectionDone = entry.visibleItems >= (streamLogs[entry.sectionIdx]?.body?.length || 0)
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === entry.sectionIdx,
+            expanded: i === entry.sectionIdx ? true : s.expanded,
+            visibleItems: i === entry.sectionIdx ? Math.max(Number(s.visibleItems || 0), entry.visibleItems) : s.visibleItems,
+            visible: i <= entry.sectionIdx || (isSectionDone && i === entry.sectionIdx + 1) ? true : s.visible,
+          })),
+        }))
+      }, 520 * (idx + 1))
+    })
+
+    setTimeout(() => {
+      updateMessageById(currentId, msgId, (m) => ({
+        ...m,
+        thinkingDone: true,
+        content: '执行流程已完成，正在整理完整结果与报告。',
+        pipelineCollapsed: true,
+        pipelineSteps: (m.pipelineSteps || []).map((s) => ({ ...s, streaming: false })),
+      }))
+    }, 520 * (revealQueue.length + 1))
+  }
+
+  const handleFastChargeComplexDemo = (questionText) => {
+    const thinkingLines = [
+      '正在理解你的研究目标…',
+      '识别到当前任务聚焦于 NCM811/硅碳体系，目标是在 45–60℃高温循环场景中寻找可替代 DTD 的电解液添加剂。',
+      '正在提取关键约束…',
+      '本次任务不仅是“找相似分子”，还需要同时考虑：高温循环下的副反应抑制、界面稳定性，以及替代路径是单剂直替还是双功能组合更合理。',
+      '正在生成分析路径…',
+      '我会优先从内部电池分子数据库中检索 DTD 相关候选，再基于候选分子构建配方并批量评估表现。',
+      '正在规划执行步骤…',
+      '本次任务预计包含：候选检索 → 候选筛选 → 配方评估 → 方案收敛 → 实验建议生成。',
+      '正在准备可执行方案…',
+      '我会先给你一个完整的执行思路和任务编排流程，你确认后我立即开始运行。',
+    ]
+    const roadmap = [
+      { skill: 'Molecular Search', detail: '跨库检索 3 种种子分子（PS / BS / DTD）。' },
+      { skill: 'Data Fusion', detail: '合并去重并计算商业化评分。' },
+      { skill: 'MD Simulation', detail: '执行高级极化力场运算（异步，预计耗时）。' },
+      { skill: 'Performance Predict', detail: '执行 80 次并行推理（20 分子 × 4 梯度）。' },
+      { skill: 'Expert Analyst', detail: '结合 RAG 数据库进行因果推断。' },
+    ]
+    const skills = [
+      {
+        name: 'Molecular Search',
+        input: 'Seeds=PS/BS/DTD；TopK=20；Fields=HOMO,LUMO,ESP,Commercial score',
+      },
+      {
+        name: 'Data Fusion',
+        input: 'Sources=internal+vendor；Dedup=InChIKey；Ranking=similarity×commercial score',
+      },
+      {
+        name: 'MD Simulation',
+        input: 'Best molecule；Electrolyte=1.2M LiPF6, EC/EMC 3:7；Forcefield=polarizable',
+      },
+      {
+        name: 'Performance Predict',
+        input: 'System=NCM811/Si-C；Grid=4 concentrations；Parallel runs=80',
+      },
+      {
+        name: 'Expert Analyst',
+        input: 'RAG corpus=SEI/fast-charge papers；Output=mechanism + PPT + Docx report',
+      },
+    ]
+    const streamLogs = [
+      {
+        title: '我先简单梳理一下这个问题：你的目标不是单纯替换DTD，而是在45–60°C高温下提升体系稳定性',
+        body: [''],
+      },
+      {
+        title: '这里我会先把路径拆开：可以做结构替代，也可以考虑功能型添加剂，或者直接走组合方案',
+        body: [''],
+      },
+      {
+        title: '从经验来看，单一替代在高温下不太稳，更可能需要从功能上拆开来分析',
+        body: [''],
+      },
+      {
+        title: '接下来我会先筛一批候选，再重点看它们在高温下的表现',
+        body: [''],
+      },
+      {
+        title: '最后再判断，是做DTD替代，还是给一套组合方案更合理',
+        body: [''],
+      },
+    ]
+    const pipelineSteps = streamLogs.map((section, idx) => ({
+      headline: section.title,
+      items: section.body,
+      detail: '',
+      streaming: idx === 0,
+      expanded: false,
+      visibleItems: 0,
+      visible: idx === 0,
+    }))
+
+    const msgId = Date.now() + 1
+    appendAssistantMessage({
+      id: msgId,
+      role: 'assistant',
+      block: 'complexFastChargeResearch',
+      content: thinkingLines[0],
+      thinkingLines,
+      thinkingIndex: 0,
+      thinkingDone: false,
+      thinkingExpanded: true,
+      pipelineCollapsed: false,
+      pipelineSteps,
+      showPlanCard: true,
+      roadmapExpanded: true,
+      roadmap,
+      skills,
+      questionText,
+    })
+
+    thinkingLines.forEach((line, idx) => {
+      setTimeout(() => {
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          thinkingIndex: idx,
+          content: line,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === Math.min(idx, (m.pipelineSteps || []).length - 1),
+          })),
+        }))
+      }, 750 * (idx + 1))
+    })
+
+    const revealQueue = streamLogs.flatMap((section, sectionIdx) =>
+      (section.body || []).map((_, itemIdx) => ({
+        sectionIdx,
+        visibleItems: itemIdx + 1,
+      }))
+    )
+
+    revealQueue.forEach((entry, idx) => {
+      setTimeout(() => {
+        const isSectionDone = entry.visibleItems >= (streamLogs[entry.sectionIdx]?.body?.length || 0)
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === entry.sectionIdx,
+            expanded: i === entry.sectionIdx ? true : s.expanded,
+            visibleItems: i === entry.sectionIdx ? Math.max(Number(s.visibleItems || 0), entry.visibleItems) : s.visibleItems,
+            visible: i <= entry.sectionIdx || (isSectionDone && i === entry.sectionIdx + 1) ? true : s.visible,
+          })),
+        }))
+      }, 520 * (idx + 1))
+    })
+
+    setTimeout(() => {
+      updateMessageById(currentId, msgId, (m) => ({
+        ...m,
+        thinkingDone: true,
+        content: '已完成首轮任务理解与路径规划，等待你确认后开始执行。',
+        pipelineCollapsed: true,
+        pipelineSteps: (m.pipelineSteps || []).map((s) => ({ ...s, streaming: false })),
+      }))
+    }, 520 * (revealQueue.length + 1))
+  }
+
+  const handlePsFastChargeComplexDemo = (questionText) => {
+    const thinkingLines = [
+      '正在理解你的研究目标…',
+      '识别到当前任务聚焦于 NCM811/石墨快充体系，希望在 1.2 M LiPF6 + EC/EMC（3:7）基础液中，寻找可替代 PS（1,3-丙烷磺内酯）的添加剂，并关注高倍率下的极化、倍率保持与循环稳定性。',
+      '正在提取关键约束…',
+      '本次任务会同时处理：与 PS 结构/成膜化学相近的候选筛选、添加剂浓度梯度（1% / 2% / 5%），以及在快充工况下与 PS 对照的性能差异解释。',
+      '正在生成分析路径…',
+      '我会先从内部电池分子数据库中检索与 PS 近邻的候选分子，再批量构建配方并完成多浓度评估。',
+      '正在规划执行步骤…',
+      '本次任务预计包含：候选检索 → 候选筛选 → 多浓度配方评估 → 方案收敛 → 结果对比与实验建议。',
+      '正在准备可执行方案…',
+      '我会先给出完整执行思路与任务编排，你确认后我立即开始运行。',
+    ]
+    const roadmap = [
+      { skill: 'Molecular Search', detail: '以 PS 为种子，扩展环状磺内酯/亚硫酸酯类近邻结构。' },
+      { skill: 'Data Fusion', detail: '合并去重并计算相似度 × 可采购性评分。' },
+      { skill: 'Performance Predict', detail: 'NCM811/石墨；快充倍率网格；1%/2%/5% 添加剂梯度。' },
+      { skill: 'Expert Analyst', detail: '结合文献与机理假设解释极化与循环折中。' },
+    ]
+    const skills = [
+      {
+        name: 'Molecular Search',
+        input: 'Seed=PS；Filters=sultone/sulfite-like；TopK=20；Fields=HOMO,LUMO,ESP,Commercial',
+      },
+      {
+        name: 'Data Fusion',
+        input: 'Dedup=InChIKey；Ranking=structure similarity + electrolyte compatibility heuristics',
+      },
+      {
+        name: 'Performance Predict',
+        input: 'Electrolyte=1.2M LiPF6 EC/EMC 3:7；Additives=1%,2%,5%；Metrics=polarization, rate retention, cycle',
+      },
+      {
+        name: 'Expert Analyst',
+        input: 'Output= ranked candidates + top-2 recommendation + DOE next steps',
+      },
+    ]
+    const streamLogs = [
+      {
+        title:
+          '我先梳理一下这个问题：你的目标不是单纯找一个 PS 替代物，而是想在 NCM811 / 石墨快充体系里，筛出更适合高倍率工况的添加剂候选。',
+        body: [''],
+      },
+      {
+        title:
+          '这里我会先把问题拆成几步：先从 PS 相似分子里收敛候选，再看这些分子在不同添加量下的快充表现，最后再判断哪两个更值得优先推荐。',
+        body: [''],
+      },
+      {
+        title:
+          '这种问题里，单看结构相似性还不够，后面还要一起看极化、倍率保持、循环稳定性这些结果，才能判断候选是不是“真的适合快充”。',
+        body: [''],
+      },
+      {
+        title:
+          '接下来我会先按你给的体系和浓度范围，把这条链路整理成可执行方案，再进入候选筛选和性能对比。',
+        body: [''],
+      },
+    ]
+    const pipelineSteps = streamLogs.map((section, idx) => ({
+      headline: section.title,
+      items: section.body,
+      detail: '',
+      streaming: idx === 0,
+      expanded: false,
+      visibleItems: 0,
+      visible: idx === 0,
+    }))
+
+    const msgId = Date.now() + 1
+    appendAssistantMessage({
+      id: msgId,
+      role: 'assistant',
+      block: 'complexPsFastChargeResearch',
+      content: thinkingLines[0],
+      thinkingLines,
+      thinkingIndex: 0,
+      thinkingDone: false,
+      thinkingExpanded: true,
+      pipelineCollapsed: false,
+      pipelineSteps,
+      showPlanCard: true,
+      roadmapExpanded: true,
+      roadmap,
+      skills,
+      questionText,
+    })
+
+    thinkingLines.forEach((line, idx) => {
+      setTimeout(() => {
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          thinkingIndex: idx,
+          content: line,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === Math.min(idx, (m.pipelineSteps || []).length - 1),
+          })),
+        }))
+      }, 750 * (idx + 1))
+    })
+
+    const revealQueue = streamLogs.flatMap((section, sectionIdx) =>
+      (section.body || []).map((_, itemIdx) => ({
+        sectionIdx,
+        visibleItems: itemIdx + 1,
+      }))
+    )
+
+    revealQueue.forEach((entry, idx) => {
+      setTimeout(() => {
+        const isSectionDone = entry.visibleItems >= (streamLogs[entry.sectionIdx]?.body?.length || 0)
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === entry.sectionIdx,
+            expanded: i === entry.sectionIdx ? true : s.expanded,
+            visibleItems: i === entry.sectionIdx ? Math.max(Number(s.visibleItems || 0), entry.visibleItems) : s.visibleItems,
+            visible: i <= entry.sectionIdx || (isSectionDone && i === entry.sectionIdx + 1) ? true : s.visible,
+          })),
+        }))
+      }, 520 * (idx + 1))
+    })
+
+    setTimeout(() => {
+      updateMessageById(currentId, msgId, (m) => ({
+        ...m,
+        thinkingDone: true,
+        content: '已完成首轮任务理解与路径规划，等待你确认后开始执行。',
+        pipelineCollapsed: true,
+        pipelineSteps: (m.pipelineSteps || []).map((s) => ({ ...s, streaming: false })),
+      }))
+    }, 520 * (revealQueue.length + 1))
+  }
+
   const parseElectrolyteDesignNLFill = (text) => {
     const raw = String(text || '').trim()
     if (!raw) return null
@@ -2348,16 +3341,18 @@ export default function Ask() {
     // Simulate async progress updates (demo only)
     const step3MsgId = assistantMsg.id
     const convId = currentId
-    const bump = (ms, progress) =>
+    const bump = (ms, progressPatch) =>
       setTimeout(() => {
         updateMessageById(convId, step3MsgId, (m) => ({
           ...m,
-          progress: { ...(m.progress || {}), ...progress, updatedAt: Date.now() }
+          progress: { ...(m.progress || {}), ...progressPatch, updatedAt: Date.now() },
         }))
       }, ms)
     bump(1200, { percent: 12, stage: 'Scheduled' })
-    bump(3200, { percent: 22, stage: 'Running' })
-    bump(6200, { percent: 31, stage: 'Analysis' })
+    bump(3200, { percent: 24, stage: 'Running' })
+    bump(6200, { percent: 38, stage: 'Running' })
+    bump(9600, { percent: 52, stage: 'Analysis' })
+    bump(14000, { percent: 58, stage: 'Report' })
 
     // Data deposition: add a Formulate task record as "In progress"
     const titleSalt = `${fd.cation || 'Li+'}/${(fd.anions || []).join('+') || 'Salt'}`
@@ -2368,11 +3363,64 @@ export default function Ask() {
       category: 'formulate',
       tool: 'Formulate',
       title: `MD simulation request · ${titleSalt} ${titleConc}`.trim(),
+      listTitle: 'MD sim',
       meta: 'Ask · Scheduled',
       status: 'inProgress',
       createdAt: Date.now(),
       userId: 'U-10001',
+      askConversationId: currentId,
+      askInlineDetail: 'mdSim',
     })
+  }
+
+  const renderMdSimInputBlock = (msg) => {
+    const fd = msg?.formData
+    if (!fd || typeof fd !== 'object') return null
+    const fracTypeLabel = fd.fractionType === 'weight' ? '质量分数' : '摩尔分数'
+    const anions = fd.anions || []
+    const fractions = fd.anionFractions || {}
+    return (
+      <div className="ask-md-input-block">
+        <dl className="ask-md-input-dl">
+          <dt>温度</dt>
+          <dd>{Number(fd.temperatureK ?? 298.15).toFixed(2)} K</dd>
+          <dt>阳离子</dt>
+          <dd>{fd.cation || 'Li+'}</dd>
+          <dt>阴离子</dt>
+          <dd>{anions.length ? anions.join(' + ') : '—'}</dd>
+          <dt>盐浓度</dt>
+          <dd>{Number(fd.totalSaltMolKg ?? 1).toFixed(4)} mol/kg</dd>
+          <dt>配比基准</dt>
+          <dd>{fracTypeLabel}</dd>
+        </dl>
+        {anions.length > 0 ? (
+          <>
+            <div className="ask-md-input-subhead">盐（{fracTypeLabel}）</div>
+            <ul className="ask-md-input-solvents">
+              {anions.map((a) => (
+                <li key={a}>
+                  <span className="ask-md-input-smi">{a}</span>
+                  <span className="ask-md-input-frac">{Number(fractions[a] ?? 0).toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+        <div className="ask-md-input-subhead">溶剂（{fracTypeLabel}）</div>
+        {(fd.solvents || []).length === 0 ? (
+          <p className="ask-md-input-empty">—</p>
+        ) : (
+          <ul className="ask-md-input-solvents">
+            {(fd.solvents || []).map((s, i) => (
+              <li key={i}>
+                <span className="ask-md-input-smi">{(s?.smiles || '—').trim() || '—'}</span>
+                <span className="ask-md-input-frac">{Number(s?.fraction ?? 0).toFixed(2)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
   }
 
   const processUserMessage = (userContent) => {
@@ -2383,7 +3431,7 @@ export default function Ask() {
     if (isCycleCountReply(userContent, conv.messages)) {
       const cycles = parseInt(userContent, 10)
       const lastPreview = [...conv.messages].reverse().find(m => m.block === 'uploadPreview')
-      const predictionMeta = createPredictionTask(lastPreview?.fileName)
+      const predictionMeta = createPredictionTask(lastPreview?.fileName, currentId)
       const convId = currentId
 
       const userMessage = { id: Date.now(), role: 'user', content: userContent }
@@ -2437,6 +3485,16 @@ export default function Ask() {
       return
     }
 
+    if (isPsFastChargeDemoIntent(userContent)) {
+      handlePsFastChargeComplexDemo(userContent)
+      return
+    }
+
+    if (isFastChargeComplexDemoIntent(userContent)) {
+      handleFastChargeComplexDemo(userContent)
+      return
+    }
+
     if (isWorkflowArchitectIntent(userContent)) {
       handleWorkflowArchitectDemo()
       return
@@ -2448,7 +3506,7 @@ export default function Ask() {
     }
 
     if (isEcQuestion(userContent)) {
-      handleEcDemo()
+      handleEcDemo(userContent)
       return
     }
 
@@ -2696,8 +3754,9 @@ export default function Ask() {
         </div>
       )}
 
-      <div className="ask-main">
-        <div className="ask-main-topbar">
+      <div className={`ask-main-column${taskListPanelOpen ? ' ask-main-column--panel-open' : ''}`}>
+          <div className="ask-main">
+            <div className="ask-main-topbar">
           <button
             type="button"
             className="ask-sidebar-floating-toggle"
@@ -2714,6 +3773,15 @@ export default function Ask() {
                 <span className="ask-conv-tokens-value">
                   {estimateTokensForConversation(current).toLocaleString()} tokens
                 </span>
+                <button
+                  type="button"
+                  className={`ask-conv-task-list-btn${taskListPanelOpen ? ' ask-conv-task-list-btn--active' : ''}`}
+                  onClick={() => setTaskListPanelOpen((v) => !v)}
+                  aria-label={taskListPanelOpen ? 'Close task list' : 'Open task list for this chat'}
+                  aria-expanded={taskListPanelOpen}
+                >
+                  Task list
+                </button>
               </div>
             </div>
           )}
@@ -4115,7 +5183,9 @@ export default function Ask() {
                                 ))}
                               </div>
                             </div>
-                            <div className="ask-md-note">预计耗时 1-3 天。完成后我会在这里和 Assets-Task 中同步提醒您。</div>
+                            <div className="ask-md-note">
+                              预计耗时 1-3 天。配方参数可在右侧 Task list 打开本任务查看；完成后我会在这里和 Assets-Task 中同步提醒您。
+                            </div>
                             <button
                               type="button"
                               className="inline-action-btn"
@@ -4328,8 +5398,628 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                       )}
                     </>
                   )}
+                  {(msg.block === 'complexFastChargeResearch' ||
+                    msg.block === 'complexFastChargeExecution' ||
+                    msg.block === 'complexPsFastChargeResearch' ||
+                    msg.block === 'complexPsFastChargeExecution') && (
+                    <div className="ask-fastcharge-demo">
+                      <div className={`ask-lit-pipeline-card ${msg.pipelineCollapsed ? 'ask-lit-pipeline-card--collapsed' : ''}`}>
+                        <div className="ask-lit-pipeline-head ask-lit-pipeline-head--row">
+                          <div className="ask-lit-pipeline-head-main">
+                            <div className="ask-lit-pipeline-head-text">
+                              <span className="ask-lit-pipeline-title">Thinking & Analysis</span>
+                              <span className="ask-lit-pipeline-sub">
+                                {msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution'
+                                  ? '正在执行任务流程（可查看进度）…'
+                                  : '正在分析问题并制定方案…'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="ask-lit-pipeline-collapse-text"
+                            onClick={() => handleComplexPipelineCollapse(msg.id)}
+                            aria-expanded={!msg.pipelineCollapsed}
+                          >
+                            {msg.pipelineCollapsed ? '展开' : '收起'}
+                          </button>
+                        </div>
+                        <div
+                          className={`ask-lit-pipeline-steps ${msg.pipelineCollapsed ? 'ask-lit-pipeline-steps--collapsed' : ''}`}
+                          hidden={!!msg.pipelineCollapsed}
+                        >
+                          {msg.block === 'complexFastChargeResearch' || msg.block === 'complexPsFastChargeResearch' ? (
+                            <div className="ask-lit-plain-stream">
+                              <p className="ask-lit-plain-line">
+                                {(msg.pipelineSteps || [])
+                                  .filter((step) => step.visible)
+                                  .map((step) => step.headline)
+                                  .join(' ')}
+                                {(msg.pipelineSteps || []).some((step) => step.streaming) ? (
+                                  <span className="ask-lit-step-caret" aria-hidden>▍</span>
+                                ) : null}
+                              </p>
+                            </div>
+                          ) : (
+                            (msg.pipelineSteps || []).map((step, idx) => (
+                              step.visible ? (
+                              <div
+                                key={`${idx}-${step.headline}`}
+                                className={`ask-lit-step ${step.streaming ? 'ask-lit-step--streaming' : 'ask-lit-step--idle'} ${step.expanded ? 'ask-lit-step--open' : ''}`}
+                              >
+                                <div className="ask-lit-step-row">
+                                  <div className="ask-lit-step-line">
+                                    <span className="ask-lit-step-dot" aria-hidden />
+                                    {idx < (msg.pipelineSteps || []).length - 1 ? <span className="ask-lit-step-connector" aria-hidden /> : null}
+                                  </div>
+                                  <div className="ask-lit-step-body">
+                                    <button
+                                      type="button"
+                                      className="ask-lit-step-headline-btn"
+                                      onClick={() => handleComplexPipelineStepDetail(msg.id, idx)}
+                                      aria-expanded={!!step.expanded}
+                                    >
+                                      <span className="ask-lit-step-subtitle">
+                                        {step.headline}
+                                        {step.streaming ? <span className="ask-lit-step-caret" aria-hidden>▍</span> : null}
+                                      </span>
+                                    </button>
+                                    {step.expanded && Array.isArray(step.items) && step.items.length > 0 ? (
+                                      <ul className="ask-lit-step-content">
+                                        {step.items
+                                          .slice(0, Number(step.visibleItems || step.items.length))
+                                          .filter((line) => String(line || '').trim())
+                                          .map((line, lineIdx) => (
+                                          (() => {
+                                            const rawLine = String(line || '')
+                                            const isIndentedNoMarker = rawLine.startsWith('>> ')
+                                            const renderLine = isIndentedNoMarker ? rawLine.slice(3) : rawLine
+                                            return (
+                                          <li
+                                            key={`${idx}-line-${lineIdx}`}
+                                            className={`ask-lit-step-content-item ${
+                                              isIndentedNoMarker ? 'ask-lit-step-content-item--indent ask-lit-step-content-item--no-marker' : ''
+                                            } ${
+                                              /^\d+\.\s/.test(String(line || '').trim()) ? 'ask-lit-step-content-item--subtask' : ''
+                                            } ${
+                                              !/^\d+\.\s/.test(String(line || '').trim()) &&
+                                              (() => {
+                                                for (let j = lineIdx - 1; j >= 0; j -= 1) {
+                                                  const prev = String(step.items?.[j] || '').trim()
+                                                  if (/^\d+\.\s/.test(prev)) return true
+                                                  if (j === 0) return false
+                                                }
+                                                return false
+                                              })()
+                                                ? 'ask-lit-step-content-item--subcontent'
+                                                : ''
+                                            }`}
+                                          >
+                                            {renderLine}
+                                          </li>
+                                            )
+                                          })()
+                                        ))}
+                                      </ul>
+                                    ) : null}
+                                    {(msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution') &&
+                                    step.headline === '正在检索候选分子…' ? (
+                                      <button
+                                        type="button"
+                                        className="ask-lit-step-tasklink"
+                                        onClick={() =>
+                                          handleComplexExecutionOpenTask(
+                                            'molecule',
+                                            msg.block === 'complexPsFastChargeExecution' ? 'ps' : 'dtd'
+                                          )
+                                        }
+                                      >
+                                        查看task
+                                      </button>
+                                    ) : null}
+                                    {(msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution') &&
+                                    step.headline === '正在构建配方并评估表现…' ? (
+                                      <button
+                                        type="button"
+                                        className="ask-lit-step-tasklink"
+                                        onClick={() =>
+                                          handleComplexExecutionOpenTask(
+                                            'electrolyte',
+                                            msg.block === 'complexPsFastChargeExecution' ? 'ps' : 'dtd'
+                                          )
+                                        }
+                                      >
+                                        查看task
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                              ) : null
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {msg.thinkingDone && msg.showPlanCard !== false && (
+                        <div className="ask-fastcharge-plan-card">
+                          {msg.block === 'complexPsFastChargeResearch' ? (
+                            <>
+                              <p className="ask-msg-para">我理解你的目标是：</p>
+                              <p className="ask-msg-para">
+                                在 NCM811 / 石墨体系下，基于 1.2 M LiPF6 + EC/EMC（3:7）的基础电解液，筛选一批与 PS（1,3-丙烷磺内酯）结构相近的候选添加剂，并比较它们在
+                                1 wt%、2 wt%、5 wt% 不同添加量下的快充表现，最终推荐 2 个更适合快充工况的分子，并解释推荐原因。
+                              </p>
+                              <p className="ask-msg-para">这个任务我会按下面的思路来处理：</p>
+                              <h4>分析思路</h4>
+                              <ol className="ask-msg-list">
+                                <li>
+                                  先做候选收敛
+                                  <p className="ask-msg-para ask-msg-para--nested">
+                                    从与 PS 结构相近的分子中筛出一批候选，优先保留具有潜在成膜能力、界面调控能力或可能改善高倍率表现的分子。
+                                  </p>
+                                </li>
+                                <li>
+                                  再看快充表现
+                                  <p className="ask-msg-para ask-msg-para--nested">
+                                    不只看分子“像不像 PS”，还要重点比较它们在快充体系下对下列方面的影响：
+                                  </p>
+                                  <ul className="ask-msg-list ask-msg-list--nested">
+                                    <li>极化</li>
+                                    <li>倍率保持</li>
+                                    <li>循环稳定性</li>
+                                  </ul>
+                                </li>
+                                <li>
+                                  最后做综合推荐
+                                  <p className="ask-msg-para ask-msg-para--nested">
+                                    结合不同添加量下的结果，判断哪些分子在快充工况下更稳定，哪些只是局部指标较好，最终给出 2 个更值得优先尝试的候选。
+                                  </p>
+                                </li>
+                              </ol>
+                              <h4>任务编排流程</h4>
+                              <p className="ask-msg-para">本次任务预计按以下流程执行：</p>
+                              <div className="ask-fastcharge-skill-grid">
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 1 | 相似分子检索 <span className="ask-fastcharge-skill-label">Molecule Find Similar</span>
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    基于 PS 分子结构，检索并收敛一批相似候选分子。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 2 | 候选筛选</div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    结合分子结构特征和基础物化信息，初步筛掉明显不适合快充体系的候选。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 3 | 快充性能评估 <span className="ask-fastcharge-skill-label">Electrolyte Design</span>
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    在 NCM811 / 石墨 + 1.2 M LiPF6 + EC/EMC（3:7）体系下，对候选分子在 1 wt%、2 wt%、5 wt% 三个浓度下进行快充性能对比。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 4 | 结果对比与筛选</div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    按分子 × 添加量整理结果，比较极化、倍率保持和循环稳定性，筛选出最优候选（Top 2）。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 5 | 微观验证 <span className="ask-fastcharge-skill-label">Molecular Dynamics (MD)</span>
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    对筛选出的候选分子进行分子动力学模拟，分析溶剂化结构和界面行为，辅助解释性能差异。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 6 | 方案输出</div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    输出推荐的 2 个候选分子、建议添加量，以及简要机理解释。
+                                  </div>
+                                </div>
+                              </div>
+                              <h4>最终交付</h4>
+                              <p className="ask-msg-para">最终我会给你：</p>
+                              <ul className="ask-msg-list">
+                                <li>一份候选分子对比结果</li>
+                                <li>2 个优先推荐分子</li>
+                                <li>推荐添加量</li>
+                                <li>简要原因说明（为什么更适合快充）</li>
+                              </ul>
+                              <p className="ask-msg-para ask-fastcharge-after-steps">如果这条执行路径符合你的预期，我可以立即开始运行整个方案。</p>
+                              <p className="ask-msg-para ask-fastcharge-choice-lead">你也可以先告诉我，你是否希望我：</p>
+                              <div className="ask-fastcharge-choice-actions">
+                                <button
+                                  type="button"
+                                  className="ask-fastcharge-choice-btn"
+                                  onClick={() => handleComplexDemoChoiceReply('直接给出完整结果和报告', 'ps')}
+                                >
+                                  直接给出完整结果和报告
+                                </button>
+                                <button
+                                  type="button"
+                                  className="ask-fastcharge-choice-btn"
+                                  onClick={() => handleComplexDemoChoiceReply('分步执行，在关键节点让你确认后继续', 'ps')}
+                                >
+                                  分步执行，在关键节点让你确认后继续
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <p className="ask-msg-para">我理解你的目标是：</p>
+                              <p className="ask-msg-para">
+                                在 NCM811/硅碳体系中，寻找可替代 DTD 的电解液添加剂，并优先适用于 45–60℃高温循环场景，希望降低副反应并提升循环稳定性。
+                              </p>
+                              <p className="ask-msg-para">
+                                针对这个任务，我不建议直接把它当成“单一分子替代问题”处理，而会先按以下思路分析：
+                              </p>
+                              <h4>分析思路</h4>
+                              <ol className="ask-msg-list">
+                                <li>
+                                  先检索 DTD 相关候选分子。基于内部电池分子数据库，寻找与 DTD 结构或功能接近的候选添加剂。
+                                </li>
+                                <li>
+                                  再判断替代路径。评估更适合直接寻找单剂替代方案，还是拆分为“负极成膜 + 高镍正极稳定”的双功能组合方案。
+                                </li>
+                                <li>
+                                  批量构建配方并评估表现。将筛选出的候选分子加入目标体系配方中，批量调用电解液配方评估能力，对高温循环相关表现进行对比。
+                                </li>
+                                <li>收敛推荐方案并生成实验建议。输出优先推荐方案、风险提示和首轮 DOE 验证建议。</li>
+                              </ol>
+                              <h4>任务编排流程</h4>
+                              <p className="ask-msg-para">本次任务预计按以下流程执行：</p>
+                              <div className="ask-fastcharge-skill-grid">
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 1｜候选检索</div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    检索 DTD 及其相关候选分子。基于内部电池分子数据库
+                                    <span className="ask-fastcharge-skill-label">Molecule Find Similar</span>
+                                    能力，筛选结构或功能相近的候选添加剂。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 2｜候选筛选</div>
+                                  <div className="ask-fastcharge-skill-input">基于结构相似性、功能角色和高温风险进行初步筛选。</div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 3｜配方评估</div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    将候选分子批量加入目标电解液体系，评估不同方案表现。基于
+                                    <span className="ask-fastcharge-skill-label">electrolyte design</span>
+                                    能力，对不同添加剂组合与比例进行对比分析。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 4｜方案收敛</div>
+                                  <div className="ask-fastcharge-skill-input">判断优先走单剂替代还是双功能组合路线。</div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 5｜结果交付</div>
+                                  <div className="ask-fastcharge-skill-input">输出推荐方案、关键判断依据和实验建议。</div>
+                                </div>
+                              </div>
+                              <p className="ask-msg-para ask-fastcharge-after-steps">如果这条执行路径符合你的预期，我可以立即开始运行整个方案。</p>
+                              <p className="ask-msg-para ask-fastcharge-choice-lead">你也可以先告诉我，你是否希望我：</p>
+                              <div className="ask-fastcharge-choice-actions">
+                                <button
+                                  type="button"
+                                  className="ask-fastcharge-choice-btn"
+                                  onClick={() => handleComplexDemoChoiceReply('直接给出完整结果和报告', 'dtd')}
+                                >
+                                  直接给出完整结果和报告
+                                </button>
+                                <button
+                                  type="button"
+                                  className="ask-fastcharge-choice-btn"
+                                  onClick={() => handleComplexDemoChoiceReply('分步执行，在关键节点让你确认后继续', 'dtd')}
+                                >
+                                  分步执行，在关键节点让你确认后继续
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {msg.thinkingDone && (msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution') && (
+                        <div className="ask-fastcharge-plan-card">
+                          {msg.block === 'complexPsFastChargeExecution' ? (
+                            <>
+                              <h4>PS 替代候选筛选结果</h4>
+                              <p className="ask-msg-para">（NCM811 / 石墨；1.2 M LiPF6 + EC/EMC（3:7）；快充工况；添加剂 1% / 2% / 5%）</p>
+
+                              <h4>🧠 结论摘要</h4>
+                              <p className="ask-msg-para">
+                                在与 PS（1,3-丙烷磺内酯）结构相近的候选中，<strong>1,3-BS</strong> 在约 <strong>2 wt%</strong> 附近相对 PS 更均衡：快充极化与倍率保持的折中更好，循环斜率更稳。
+                              </p>
+                              <p className="ask-msg-para">
+                                <strong>PLS</strong> 在极化趋势上更友好，但在 <strong>5 wt%</strong> 高档位 demo 中循环惩罚更明显，更适合锁定中低负载并做与 PS 的严格配对对照。
+                              </p>
+                              <p className="ask-msg-para">
+                                <strong>Ethylene sulfite</strong> 可作为亚硫酸酯类对照路径：某些倍率窗口下表现亮眼，但整体不如 1,3-BS 适合作为「首选直替」。
+                              </p>
+
+                              <h4>🟢 推荐 Top-2</h4>
+                              <div className="ask-fastcharge-reco-grid">
+                                <div className="ask-fastcharge-reco-card ask-fastcharge-reco-card--primary">
+                                  <div className="ask-fastcharge-reco-name">推荐 1：1,3-BS</div>
+                                  <div className="ask-fastcharge-reco-body">
+                                    建议首轮验证浓度：<strong>2 wt%</strong>（并与 PS <strong>2 wt%</strong> 同步对照）
+                                    <br />
+                                    • 为什么：与 PS 同属环状磺内酯近邻，界面化学路径最接近；在 1%→2%→5% 梯度中，<strong>2%</strong> 更常落在「增益明显大于副反应」的窗口区，利于同时看极化与循环。
+                                    <br />
+                                    • 适合作为：主线候选（快充 + 循环双指标）。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-reco-card ask-fastcharge-reco-card--secondary">
+                                  <div className="ask-fastcharge-reco-name">推荐 2：PLS</div>
+                                  <div className="ask-fastcharge-reco-body">
+                                    建议首轮验证浓度：<strong>2 wt%</strong>（若 DCIR 仍偏高，再下探到 <strong>1 wt%</strong> 做窗口扫描）
+                                    <br />
+                                    • 为什么：不饱和磺内酯类路径更利于在快充脉冲下重塑界面阻抗特征，对<strong>极化爬升</strong>往往更敏感地给出正向信号。
+                                    <br />
+                                    • 注意：高负载（5%）下循环风险上升更明显，建议与气体/EIS 监控捆绑验证。
+                                  </div>
+                                </div>
+                              </div>
+
+                              <h4>🧠 关键判断依据</h4>
+                              <ol className="ask-msg-list">
+                                <li>结构近邻性：优先比较与 PS 同族的环状磺内酯/近亚硫酸酯骨架，减少「换了分子但界面机理完全漂移」带来的误判。</li>
+                                <li>快充三指标：同一套倍率探针下同时看充放极化、倍率保持、循环衰退斜率，避免只追单一指标。</li>
+                                <li>浓度梯度：用 1% / 2% / 5% 识别增益区与副反应放大区；高档位变差不等于分子差，可能是剂量窗口不合适。</li>
+                              </ol>
+
+                              <h4>🧪 实验建议</h4>
+                              <p className="ask-msg-para">推荐验证路径</p>
+                              <ul className="ask-msg-list">
+                                <li>Baseline：PS 2%（对照）+ 1,3-BS 2% + PLS 2%（三组并行）。</li>
+                                <li>窗口扫描：对更优候选各补 1% 与 5% 两个端点，确认趋势单调性与副反应拐点。</li>
+                                <li>诊断：EIS/DCIR（快充前后）、倍率阶梯、长循环容量衰减；必要时加产气与 CE 追踪。</li>
+                              </ul>
+                              <h4>DOE 建议</h4>
+                              <p className="ask-msg-para">首轮矩阵可覆盖：</p>
+                              <ul className="ask-msg-list">
+                                <li>添加剂种类（1,3-BS / PLS / Ethylene sulfite）</li>
+                                <li>wt%（1 / 2 / 5）</li>
+                                <li>倍率探针（如 1C ↔ 3–6C 脉冲）</li>
+                                <li>循环温度（常温为主，补一组 40℃ 以分离热效应）</li>
+                              </ul>
+
+                              <div className="ask-fastcharge-attach">
+                                <div className="ask-fastcharge-attach-title">附件下载</div>
+                                <div className="ask-fastcharge-attach-list">
+                                  <button
+                                    type="button"
+                                    className="ask-fastcharge-attach-item"
+                                    onClick={() => {
+                                      const pdfText = `PS 替代候选筛选结果\n（NCM811 / 石墨；1.2M LiPF6 EC/EMC 3:7；快充）\n\n本 PDF 为 demo 附件，用于展示下载交互。\n`
+                                      triggerDownload('PS替代快充评估摘要.pdf', 'application/pdf', pdfText)
+                                    }}
+                                  >
+                                    PS替代快充评估摘要.pdf
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="ask-fastcharge-attach-item"
+                                    onClick={() => {
+                                      const csv = [
+                                        'factor,level',
+                                        'baseline,"PS 2wt%"',
+                                        'candidates,"1,3-BS; PLS; Ethylene sulfite"',
+                                        'wt_percent,"1; 2; 5"',
+                                        'electrolyte,"1.2M LiPF6 EC:EMC 3:7"',
+                                        'metrics,"polarization; rate_retention; cycle_decay"',
+                                      ].join('\n')
+                                      triggerDownload('快充添加剂DOE矩阵.csv', 'text/csv;charset=utf-8', csv)
+                                    }}
+                                  >
+                                    快充添加剂DOE矩阵.csv
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="ask-fastcharge-recoq">
+                                <div className="ask-fastcharge-recoq-title">推荐问题</div>
+                                <div className="ask-fastcharge-recoq-chips">
+                                  {[
+                                    '把 1%/2%/5% 的结果整理成一张相对 PS 的雷达对比图（极化/倍率/循环）。',
+                                    '如果产气异常，优先从哪一档浓度回退、如何改 DOE？',
+                                    '在同样 2% 负载下，1,3-BS 与 PS 的机理差异该怎么用实验证伪？',
+                                  ].map((q) => (
+                                    <button
+                                      key={q}
+                                      type="button"
+                                      className="ask-fastcharge-recoq-chip"
+                                      onClick={() => handleQuickUserReply(q)}
+                                    >
+                                      {q}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                          <h4>DTD 替代添加剂筛选结果</h4>
+                          <p className="ask-msg-para">（NCM811 / 硅碳体系，高温循环场景）</p>
+
+                          <h4>🧠 结论摘要</h4>
+                          <p className="ask-msg-para">基于候选筛选与配方评估结果，本次分析认为：</p>
+                          <p className="ask-msg-para">不建议优先采用单一添加剂直接替代 DTD。</p>
+                          <p className="ask-msg-para">
+                            更优策略是采用 👉 “负极成膜剂 + 高镍正极稳定剂”的双功能组合方案，以在高温循环条件下实现更稳定的性能表现。
+                          </p>
+
+                          <h4>🟢 推荐方案</h4>
+                          <div className="ask-fastcharge-reco-grid">
+                            <div className="ask-fastcharge-reco-card ask-fastcharge-reco-card--primary">
+                              <div className="ask-fastcharge-reco-name">方案 A1（优先推荐）</div>
+                              <div className="ask-fastcharge-reco-body">
+                                PLS + TTSPi
+                                <br />• 类型：双功能组合
+                                <br />• 优势：同时覆盖负极成膜与高镍正极稳定需求；在高温循环场景下更有利于抑制副反应
+                                <br />• 建议用途：作为主线验证方案
+                              </div>
+                            </div>
+                            <div className="ask-fastcharge-reco-card ask-fastcharge-reco-card--secondary">
+                              <div className="ask-fastcharge-reco-name">方案 A2（备选组合）</div>
+                              <div className="ask-fastcharge-reco-body">
+                                1,3-BS + TTSPi
+                                <br />• 类型：双功能组合
+                                <br />• 优势：与 DTD 替代路径更接近，更适合作为对照验证方案
+                              </div>
+                            </div>
+                            <div className="ask-fastcharge-reco-card">
+                              <div className="ask-fastcharge-reco-name">方案 B1（快速验证）</div>
+                              <div className="ask-fastcharge-reco-body">
+                                PLS（单剂）
+                                <br />• 类型：单剂替代
+                                <br />• 优势：结构接近 DTD，实验路径简单、验证成本低
+                                <br />• 风险：对高温场景的稳定性支持可能不足
+                              </div>
+                            </div>
+                            <div className="ask-fastcharge-reco-card">
+                              <div className="ask-fastcharge-reco-name">方案 B2（补充验证）</div>
+                              <div className="ask-fastcharge-reco-body">
+                                1,3-BS（单剂）
+                                <br />• 类型：单剂替代
+                                <br />• 说明：可作为结构近邻方案进行对比验证
+                              </div>
+                            </div>
+                          </div>
+
+                          <h4>🧠 关键判断依据</h4>
+                          <ol className="ask-msg-list">
+                            <li>结构相似性：优先保留与 DTD 结构或功能接近的候选，以降低体系变化风险并提高验证效率。</li>
+                            <li>
+                              功能角色拆分：DTD 在体系中承担复合功能，因此更合理路径是拆分为：
+                              负极成膜功能 + 高镍正极稳定功能。
+                            </li>
+                            <li>高温场景约束：候选方案必须在 45–60℃ 条件下具备稳定性，而非仅在常温条件下有效。</li>
+                          </ol>
+
+                          <h4>🧪 实验建议</h4>
+                          <p className="ask-msg-para">推荐验证路径</p>
+                          <ul className="ask-msg-list">
+                            <li>路线 1（主线验证）：PLS + TTSPi；1,3-BS + TTSPi</li>
+                            <li>路线 2（快速验证）：PLS；1,3-BS</li>
+                          </ul>
+                          <h4>DOE 建议</h4>
+                          <p className="ask-msg-para">建议构建首轮实验矩阵，覆盖：</p>
+                          <ul className="ask-msg-list">
+                            <li>添加剂组合</li>
+                            <li>添加剂比例（wt% 梯度）</li>
+                            <li>45℃循环测试</li>
+                            <li>60℃高温存储 / 副反应评估</li>
+                            <li>循环保持率与气体生成等指标</li>
+                          </ul>
+
+                          <div className="ask-fastcharge-attach">
+                            <div className="ask-fastcharge-attach-title">附件下载</div>
+                            <div className="ask-fastcharge-attach-list">
+                              <button
+                                type="button"
+                                className="ask-fastcharge-attach-item"
+                                onClick={() => {
+                                  const pdfText = `DTD 替代添加剂筛选结果\n（NCM811 / 硅碳体系，高温循环场景）\n\n本 PDF 为 demo 附件，用于展示下载交互。\n`
+                                  triggerDownload('替代方案分析报告.pdf', 'application/pdf', pdfText)
+                                }}
+                              >
+                                替代方案分析报告.pdf
+                              </button>
+                              <button
+                                type="button"
+                                className="ask-fastcharge-attach-item"
+                                onClick={() => {
+                                  const csv = [
+                                    'factor,level',
+                                    'additive_combo,"PLS+TTSPi; 1,3-BS+TTSPi; PLS; 1,3-BS"',
+                                    'wt_percent,"0.5; 1.0; 1.5"',
+                                    'cycle_temp_c,"45; 60"',
+                                    'storage_60c_h,"24; 72"',
+                                    'metrics,"retention; gas_generation; impedance"',
+                                  ].join('\n')
+                                  triggerDownload('实验设计矩阵（DOE）.csv', 'text/csv;charset=utf-8', csv)
+                                }}
+                              >
+                                实验设计矩阵（DOE）.csv
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="ask-fastcharge-recoq">
+                            <div className="ask-fastcharge-recoq-title">推荐问题</div>
+                            <div className="ask-fastcharge-recoq-chips">
+                              {[
+                                '把 DOE 矩阵细化成具体实验表（组合×比例×温度）。',
+                                '分别解释 PLS 与 TTSPi 在高温下的作用机理与风险点。',
+                                '如果只允许单剂替代，PLS/1,3-BS 该怎么选，如何规避高温副反应？',
+                              ].map((q) => (
+                                <button
+                                  key={q}
+                                  type="button"
+                                  className="ask-fastcharge-recoq-chip"
+                                  onClick={() => handleQuickUserReply(q)}
+                                >
+                                  {q}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {msg.block === 'moleculeEc' && (
                     <div className="ask-msg-molecule-wrap">
+                      {msg.moleculeSearchSkill ? (
+                        <div className="ask-mol-skill-monitor" aria-label="Molecule Search skill status">
+                          <div className="ask-mol-skill-monitor-top">
+                            <span className="ask-mol-skill-monitor-badge">Molecule Search</span>
+                            <span className="ask-mol-skill-monitor-done">Done</span>
+                          </div>
+                          <div className="ask-mol-skill-monitor-query">
+                            <span className="ask-mol-skill-monitor-k">Query</span>
+                            <span className="ask-mol-skill-monitor-v">{msg.skillQueryText || 'EC'}</span>
+                          </div>
+                          <ul className="ask-mol-skill-monitor-steps">
+                            <li className="ask-mol-skill-monitor-step ask-mol-skill-monitor-step--ok">
+                              <span className="ask-mol-skill-monitor-step-icon" aria-hidden>✓</span>
+                              Parse intent & entity (EC)
+                            </li>
+                            <li className="ask-mol-skill-monitor-step ask-mol-skill-monitor-step--ok">
+                              <span className="ask-mol-skill-monitor-step-icon" aria-hidden>✓</span>
+                              Resolve structure & properties
+                            </li>
+                            <li className="ask-mol-skill-monitor-step ask-mol-skill-monitor-step--ok">
+                              <span className="ask-mol-skill-monitor-step-icon" aria-hidden>✓</span>
+                              Emit molecule card
+                            </li>
+                          </ul>
+                          {msg.taskId ? (
+                            <button
+                              type="button"
+                              className="ask-mol-skill-monitor-tasklink"
+                              onClick={() => {
+                                setTaskListPanelOpen(true)
+                                const t = tasks.find((x) => String(x.id) === String(msg.taskId))
+                                if (t && t.type === 'moleculeSearch') setTaskPanelDetailTask(t)
+                                else setTaskPanelDetailTask(null)
+                              }}
+                            >
+                              Open in Task list · {msg.taskId}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <p className="ask-msg-para">
                         EC (ethylene carbonate) is a cyclic organic carbonate widely used as a high‑dielectric constant solvent in Li‑ion
                         battery electrolytes. It helps form a robust SEI on graphite anodes, improves low‑temperature performance, and is
@@ -4602,6 +6292,267 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
             </div>
           </form>
         </div>
+          </div>
+
+          <aside
+            className="ask-conv-task-panel"
+            aria-label="Tasks from this conversation"
+            aria-hidden={!taskListPanelOpen}
+          >
+            <div
+              className={`ask-conv-task-panel-head${taskPanelDetailTask ? ' ask-conv-task-panel-head--detail' : ''}`}
+            >
+              {taskPanelDetailTask ? (
+                <>
+                  <button
+                    type="button"
+                    className="ask-conv-task-panel-back"
+                    onClick={() => setTaskPanelDetailTask(null)}
+                    aria-label="Back to task list"
+                  >
+                    ←
+                  </button>
+                  <div className="ask-conv-task-panel-title ask-conv-task-panel-title--detail" title={taskPanelDetailTask.title}>
+                    {taskPanelDetailTask.listTitle || taskPanelDetailTask.title || taskPanelDetailTask.id}
+                  </div>
+                </>
+              ) : (
+                <div className="ask-conv-task-panel-title">Tasks in this chat</div>
+              )}
+              <button
+                type="button"
+                className="ask-conv-task-panel-close"
+                onClick={() => setTaskListPanelOpen(false)}
+                aria-label="Close task list"
+              >
+                ×
+              </button>
+            </div>
+            <div className="ask-conv-task-panel-body">
+              {taskPanelDetailTask?.askInlineDetail === 'mdSim' ? (
+                <div className="ask-conv-task-panel-md-wrap">
+                  <div className="ask-conv-task-panel-detail-full-title">{taskPanelDetailTask.title}</div>
+                  {mdSimDetailMessage ? (
+                    <div className="ask-md-result ask-conv-task-panel-md-result">
+                      <div className="ask-md-result-row">
+                        <span className="ask-md-k">状态</span>
+                        <span className="ask-md-v ask-md-v--success">Success - 任务已进入调度队列</span>
+                      </div>
+                      <div className="ask-md-result-row">
+                        <span className="ask-md-k">任务 ID</span>
+                        <span className="ask-md-v">{mdSimDetailMessage.taskId || taskPanelDetailTask.id}</span>
+                      </div>
+                      <div className="ask-md-progress">
+                        <div className="ask-md-progress-head">
+                          <span className="ask-md-progress-title">当前计算进度</span>
+                          <span className="ask-md-progress-meta">
+                            {Math.max(0, Math.min(100, Number(mdSimDetailMessage.progress?.percent ?? 0)))}% ·{' '}
+                            {mdSimDetailMessage.progress?.stage || 'Queued'}
+                          </span>
+                        </div>
+                        <div
+                          className="ask-md-progress-bar"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={Math.max(
+                            0,
+                            Math.min(100, Number(mdSimDetailMessage.progress?.percent ?? 0))
+                          )}
+                        >
+                          <div
+                            className="ask-md-progress-fill"
+                            style={{
+                              width: `${Math.max(0, Math.min(100, Number(mdSimDetailMessage.progress?.percent ?? 0)))}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="ask-md-progress-stages">
+                          {['Queued', 'Scheduled', 'Running', 'Analysis', 'Report'].map((s) => (
+                            <span
+                              key={s}
+                              className={`ask-md-stage ${mdSimDetailMessage.progress?.stage === s ? 'active' : ''}`}
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {renderMdSimInputBlock(mdSimDetailMessage)}
+                      <div className="ask-md-note">预计耗时 1-3 天。进度与对话中同步更新。</div>
+                      <button
+                        type="button"
+                        className="ask-conv-task-panel-link-secondary"
+                        onClick={() => {
+                          setTaskListPanelOpen(false)
+                          navigate(
+                            `/tasks-data/formulate?openTask=${encodeURIComponent(taskPanelDetailTask.id)}`
+                          )
+                        }}
+                      >
+                        在 Assets 中打开完整页…
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="ask-conv-task-panel-empty">
+                      在对话中完成 MD 参数并提交后，将在此显示队列、进度与输入参数。
+                    </p>
+                  )}
+                </div>
+              ) : taskPanelDetailTask?.askInlineDetail === 'electrolyteDesign' ? (
+                <div className="ask-conv-task-panel-mol-detail">
+                  <div className="ask-conv-task-panel-detail-full-title">{taskPanelDetailTask.title}</div>
+                  {taskPanelDetailTask.queryText ? (
+                    <div className="ask-conv-task-panel-detail-query">
+                      <span className="ask-conv-task-panel-detail-query-k">Query</span>
+                      {taskPanelDetailTask.queryText}
+                    </div>
+                  ) : null}
+                  {Array.isArray(taskPanelDetailTask.edComparisons) && taskPanelDetailTask.edComparisons.length > 0 ? (
+                    <div className="ask-ed-task-list">
+                      {taskPanelDetailTask.edComparisons.map((cmp) => (
+                        <div key={cmp.id} className="ask-ed-task-card">
+                          <div className="ask-ed-task-card-head">
+                            <div className="ask-ed-task-card-title">{cmp.title}</div>
+                            <div className="ask-ed-task-card-meta">
+                              Candidate: {cmp.candidate} · Baseline: {cmp.baseline} · wt%: {cmp.wtPercent}
+                            </div>
+                          </div>
+                          <div className="ask-ed-task-metrics">
+                            <div className="ask-ed-task-row">
+                              <div className="ask-ed-task-row-title">25°C Performance</div>
+                              <div className="ask-ed-task-pill down">↓ {cmp.metrics?.perf25CycleLifeDrop || '—'}</div>
+                              <div className="ask-ed-task-k">Cycle Life</div>
+                            </div>
+                            <div className="ask-ed-task-row">
+                              <div className="ask-ed-task-row-title">45°C Performance</div>
+                              <div className="ask-ed-task-pill down">↓ {cmp.metrics?.perf45CycleLifeDrop || '—'}</div>
+                              <div className="ask-ed-task-k">Cycle Life</div>
+                            </div>
+                            <div className="ask-ed-task-row">
+                              <div className="ask-ed-task-row-title">25°C Rate Performance</div>
+                              <div className="ask-ed-task-pill down">↓ {cmp.metrics?.perf25RateDrop || '—'}</div>
+                              <div className="ask-ed-task-k">Rate Performance</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="ask-conv-task-panel-empty">No electrolyte design comparison in this task record.</p>
+                  )}
+                </div>
+              ) : taskPanelDetailTask ? (
+                <div className="ask-conv-task-panel-mol-detail">
+                  <div className="ask-conv-task-panel-detail-full-title">{taskPanelDetailTask.title}</div>
+                  {taskPanelDetailTask.queryText ? (
+                    <div className="ask-conv-task-panel-detail-query">
+                      <span className="ask-conv-task-panel-detail-query-k">Query</span>
+                      {taskPanelDetailTask.queryText}
+                    </div>
+                  ) : null}
+                  {Array.isArray(taskPanelDetailTask.molecules) && taskPanelDetailTask.molecules.length > 0 ? (
+                    <div className="ask-conv-task-panel-mol-stack">
+                      {taskPanelDetailTask.molecules.map((mol) => (
+                        <MoleculeCardBlock
+                          key={mol.name}
+                          mol={mol}
+                          onAddFavorite={addFavorite}
+                          showFindSimilar={false}
+                        />
+                      ))}
+                    </div>
+                  ) : taskPanelDetailTask.molecule ? (
+                    <MoleculeCardBlock
+                      mol={taskPanelDetailTask.molecule}
+                      onAddFavorite={addFavorite}
+                      showFindSimilar={false}
+                    />
+                  ) : (
+                    <p className="ask-conv-task-panel-empty">No molecule card in this task record.</p>
+                  )}
+                </div>
+              ) : conversationTasks.length === 0 ? (
+                <p className="ask-conv-task-panel-empty">No tasks started from this conversation yet.</p>
+              ) : (
+                <ul className="ask-conv-task-panel-list">
+                  {conversationTasks.map((task) => {
+                    const rowLabel =
+                      task.listTitle ||
+                      (task.title && task.title.length > 36 ? `${task.title.slice(0, 36)}…` : task.title) ||
+                      task.id
+                    return (
+                      <li key={task.id}>
+                        <button
+                          type="button"
+                          className="ask-conv-task-panel-row"
+                          onClick={() => {
+                            if (task.type === 'moleculeSearch') {
+                              setTaskPanelDetailTask(task)
+                              return
+                            }
+                            if (task.askInlineDetail === 'mdSim') {
+                              setTaskPanelDetailTask(task)
+                              return
+                            }
+                            if (task.askInlineDetail === 'electrolyteDesign') {
+                              setTaskPanelDetailTask(task)
+                              return
+                            }
+                            setTaskListPanelOpen(false)
+                            if (task.type === 'workflow' || task.category === 'workflows') {
+                              navigate('/tasks-data')
+                              return
+                            }
+                            if (
+                              task.category === ASSET_CATEGORY.electrolyteDesign &&
+                              task.type === 'asset' &&
+                              task.askInlineDetail !== 'electrolyteDesign'
+                            ) {
+                              navigate(`/tasks-data/electrolyte-design?openTask=${encodeURIComponent(task.id)}`)
+                              return
+                            }
+                            if (task.category === 'formulate' && task.type === 'asset') {
+                              navigate(`/tasks-data/formulate?openTask=${encodeURIComponent(task.id)}`)
+                              return
+                            }
+                            navigate(`/tasks-data/task/${task.id}`)
+                          }}
+                        >
+                          <div className="ask-conv-task-panel-row-head">
+                            <span className="ask-conv-task-panel-row-title">{rowLabel}</span>
+                            <span
+                              className={`ask-conv-task-panel-status ask-conv-task-panel-status--${normalizeTaskStatus(task)}`}
+                            >
+                              {getTaskStatusLabel(task)}
+                            </span>
+                          </div>
+                          <span className="ask-conv-task-panel-row-meta">{getTaskFeatureLabel(task)}</span>
+                          <span className="ask-conv-task-panel-row-time">
+                            {formatCreatedAtDisplay(getTaskCreatedAtMs(task))}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+            {!taskPanelDetailTask && conversationTasks.length > 0 ? (
+              <div className="ask-conv-task-panel-foot">
+                <button
+                  type="button"
+                  className="ask-conv-task-panel-link-all"
+                  onClick={() => {
+                    setTaskListPanelOpen(false)
+                    navigate('/tasks-data')
+                  }}
+                >
+                  View all in Assets
+                </button>
+              </div>
+            ) : null}
+          </aside>
       </div>
 
       {moleculeDrawerOpen ? (

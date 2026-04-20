@@ -6,6 +6,7 @@ export const ASSET_CATEGORY = {
   electrolyteDesign: 'electrolyteDesign',
   electrodeForwardDesign: 'electrodeForwardDesign',
   electrodeInverseDesign: 'electrodeInverseDesign',
+  moleculeSearch: 'moleculeSearch',
 }
 
 export const DEMO_ASSET_TASKS = [
@@ -125,16 +126,21 @@ export function getTaskCreatedAtMs(task) {
 
 export function normalizeTaskStatus(task) {
   if (task.status === 'done') return 'done'
+  if (task.status === 'scheduled') return 'scheduled'
   return 'inProgress'
 }
 
 export function getTaskStatusLabel(task) {
-  return normalizeTaskStatus(task) === 'done' ? 'Done' : 'In progress'
+  const s = normalizeTaskStatus(task)
+  if (s === 'done') return 'Done'
+  if (s === 'scheduled') return 'Scheduled'
+  return 'In progress'
 }
 
 /** Value for Recent Tasks Feature filter */
 export function getTaskTypeFilterKey(task) {
   if (task.type === 'prediction') return 'prediction'
+  if (task.type === 'moleculeSearch') return ASSET_CATEGORY.moleculeSearch
   if (task.category === ASSET_CATEGORY.predicts) return 'prediction'
   if (task.category) return task.category
   if (task.type === 'other') return 'other'
@@ -149,6 +155,7 @@ export const RECENT_FEATURE_FILTER_OPTIONS = [
   { value: ASSET_CATEGORY.electrolyteDesign, label: 'Electrolyte Design' },
   { value: ASSET_CATEGORY.electrodeForwardDesign, label: 'Electrode Forward Design' },
   { value: ASSET_CATEGORY.electrodeInverseDesign, label: 'Electrode Inverse Design' },
+  { value: ASSET_CATEGORY.moleculeSearch, label: 'Molecule Search' },
   { value: 'other', label: 'Other' },
 ]
 

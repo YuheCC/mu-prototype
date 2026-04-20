@@ -38,7 +38,13 @@ export default function RecentTasks() {
   const filtered = useMemo(() => {
     return mergedBase.filter((task) => {
       if (filterFeature !== 'all' && getTaskTypeFilterKey(task) !== filterFeature) return false
-      if (filterStatus !== 'all' && normalizeTaskStatus(task) !== filterStatus) return false
+      if (filterStatus !== 'all') {
+        const st = normalizeTaskStatus(task)
+        const statusMatch =
+          st === filterStatus ||
+          (filterStatus === 'inProgress' && st === 'scheduled')
+        if (!statusMatch) return false
+      }
       const ms = getTaskCreatedAtMs(task)
       if (!taskCreatedInTimeRange(ms, filterTime)) return false
       return true

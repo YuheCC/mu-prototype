@@ -195,3 +195,63 @@
   border: 1px dashed #d93025;
   height: 1px;
 }
+
+.pred-mol-search-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.pred-mol-search-query {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.pred-mol-card-dl {
+  display: grid;
+  grid-template-columns: minmax(100px, 160px) 1fr;
+  gap: 8px 20px;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.pred-mol-card-dl dt {
+  margin: 0;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.pred-mol-card-dl dd {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.pred-mol-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.pred-mol-desc {
+  grid-column: 1 / -1;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.pred-mol-multi-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.pred-mol-multi-item {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.pred-mol-multi-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}

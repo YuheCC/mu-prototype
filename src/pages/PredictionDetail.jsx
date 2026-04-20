@@ -30,6 +30,76 @@ export default function PredictionDetail() {
     )
   }
 
+  if (task.type === 'moleculeSearch') {
+    const multi = Array.isArray(task.molecules) && task.molecules.length > 0 ? task.molecules : null
+    const single = task.molecule
+    const renderMolDl = (mol) => (
+      <dl className="pred-mol-card-dl">
+        <dt>Name</dt>
+        <dd>{mol.name}</dd>
+        <dt>SMILES</dt>
+        <dd className="pred-mol-mono">{mol.smiles}</dd>
+        <dt>Mol weight</dt>
+        <dd>{mol.molWeight}</dd>
+        <dt>Predicted MP / BP / Flash</dt>
+        <dd>
+          {mol.meltingPoint} ℃ / {mol.boilingPoint} ℃ / {mol.flashPoint} ℃
+        </dd>
+        <dt>HOMO / LUMO</dt>
+        <dd>
+          {mol.homo} / {mol.lumo}
+        </dd>
+        <dt>Commercial</dt>
+        <dd>{mol.commercial}</dd>
+        {mol.desc ? (
+          <>
+            <dt>Summary</dt>
+            <dd className="pred-mol-desc">{mol.desc}</dd>
+          </>
+        ) : null}
+      </dl>
+    )
+    return (
+      <div className="pred-detail-page pred-detail-page--mol-search">
+        <div className="pred-detail-top">
+          <h1 className="pred-detail-title">{task.title || task.id}</h1>
+          <button type="button" className="pred-back-btn" onClick={() => navigate('/tasks-data')}>
+            Back to List
+          </button>
+        </div>
+
+        <section className="pred-section">
+          <h2 className="pred-section-title">Skill</h2>
+          <p className="pred-mol-search-meta">{task.tool || 'Molecule Search'} · {task.meta || 'Ask'}</p>
+        </section>
+
+        {task.queryText ? (
+          <section className="pred-section">
+            <h2 className="pred-section-title">Query</h2>
+            <p className="pred-mol-search-query">{task.queryText}</p>
+          </section>
+        ) : null}
+
+        <section className="pred-section">
+          <h2 className="pred-section-title">{multi ? `Molecule cards (${multi.length})` : 'Molecule card'}</h2>
+          {multi ? (
+            <div className="pred-mol-multi-stack">
+              {multi.map((mol) => (
+                <div key={mol.name} className="pred-mol-multi-item">
+                  {renderMolDl(mol)}
+                </div>
+              ))}
+            </div>
+          ) : single ? (
+            renderMolDl(single)
+          ) : (
+            <p>No molecule payload on this task.</p>
+          )}
+        </section>
+      </div>
+    )
+  }
+
   const innerW = CHART_WIDTH - PAD.left - PAD.right
   const innerH = CHART_HEIGHT - PAD.top - PAD.bottom
   const xScale = (v) => PAD.left + (v / X_MAX) * innerW

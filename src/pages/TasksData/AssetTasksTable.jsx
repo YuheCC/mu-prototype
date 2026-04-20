@@ -65,9 +65,7 @@ export default function AssetTasksTable({
                   <td className="asset-tasks-feature">{getTaskFeatureLabel(task)}</td>
                 ) : null}
                 <td>
-                  <span
-                    className={`asset-tasks-status asset-tasks-status--${st === 'done' ? 'done' : 'inProgress'}`}
-                  >
+                  <span className={`asset-tasks-status asset-tasks-status--${st}`}>
                     {statusLabel}
                   </span>
                 </td>

@@ -308,6 +308,12 @@
   border: 1px solid rgba(91, 131, 200, 0.22);
 }
 
+.asset-tasks-status--scheduled {
+  color: #1e40af;
+  background: #dbeafe;
+  border: 1px solid rgba(30, 64, 175, 0.2);
+}
+
 .asset-tasks-filters {
   display: flex;
   flex-wrap: wrap;
