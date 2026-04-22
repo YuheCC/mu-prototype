@@ -414,6 +414,22 @@ const DTD_SIMILAR_MOLECULES = [
   },
 ]
 
+/** 英文 DTD 虚拟筛选 demo：20 条虚拟命中（由 DTD 相似种子轮换生成，仅用于展示） */
+const DTD_VIRTUAL_SCREENING_20 = (() => {
+  const bases = DTD_SIMILAR_MOLECULES
+  return Array.from({ length: 20 }, (_, i) => {
+    const b = bases[i % bases.length]
+    const n = i + 1
+    return {
+      ...b,
+      name: `VS-${String(n).padStart(2, '0')} · ${b.name}`,
+      status: 'Predicted (virtual)',
+      desc: `Virtual screening rank #${n}: DTD-like scaffold for NCM811 / silicon–carbon screening (demo).`,
+      favPayload: b.favPayload ? { ...b.favPayload, addedDate: `VS-${n}` } : b.favPayload,
+    }
+  })
+})()
+
 /** 与 PS（1,3-丙烷磺内酯）结构/功能相近的 demo 候选（快充 NCM811/石墨） */
 const PS_SIMILAR_MOLECULES = [
   {
@@ -514,6 +530,30 @@ const MOLECULE_INDEX = (() => {
   return Object.fromEntries(base.map((m) => [m.name, m]))
 })()
 
+/** 英文 DTD 虚拟筛选 demo：三套相同电解液、候选不同的 MD 输入（与 Formulate 面板字段对齐） */
+const buildDtdVirtualScreeningMdSimFormData = (candidate) => {
+  const fecSm = MOLECULE_INDEX.FEC?.smiles ?? 'O=C1OCC(F)O1'
+  const emcSm = MOLECULE_INDEX.EMC?.smiles ?? 'CCOC(=O)OC'
+  return {
+    temperatureK: 298.15,
+    cation: 'Li+',
+    anions: ['PF6-'],
+    anionFractions: { 'PF6-': 1 },
+    totalSaltMolKg: 1.0,
+    fractionType: 'weight',
+    solvents: [
+      { smiles: fecSm, fraction: 0.25 },
+      { smiles: emcSm, fraction: 0.75 },
+    ],
+    mdPackLines: [
+      '锂盐：1.0 M LiPF6',
+      '溶剂：FEC : EMC = 25 : 75（wt%）',
+      '基线添加剂：DTD @ 1 wt%',
+      `候选添加剂：${candidate} @ 1 wt%`,
+    ],
+  }
+}
+
 const ELECTROLYTE_SOLVENT_DEMO_Q = '锂离子电池的电解质溶剂选择有哪些关键考虑因素？'
 const FAST_CHARGE_COMPLEX_DEMO_KEYWORDS = [
   'ncm811',
@@ -542,6 +582,32 @@ const isPsFastChargeDemoIntent = (text) => {
     t.includes('ec') &&
     t.includes('emc')
   )
+}
+
+/** 英文 DTD 虚拟筛选 + Top-3 MD + Docx/PPTX 交付 demo（与其它 session 的 DTD 高温中文 demo 分流） */
+const isDtdVirtualScreeningEnglishDemoIntent = (text) => {
+  const raw = String(text || '')
+  const t = raw.toLowerCase().replace(/，/g, ',')
+  if (!t) return false
+  const normalized = t.replace(/[-–—_]+/g, ' ').replace(/[/:]+/g, ' ')
+  const hasCoreDtd = t.includes('dtd') && t.includes('replace')
+  const hasSystem = (t.includes('ncm811') || t.includes('ncm 811')) && (/\bsilicon\W*carbon\b/.test(normalized) || /\bsi\W*c\b/.test(normalized))
+  const hasVirtualScreening = t.includes('virtual screening') && t.includes('20') && t.includes('similar')
+  const hasPipelineTail =
+    (t.includes('prediction') || t.includes('predict')) &&
+    (t.includes('designed experiments') || t.includes('design experiments') || t.includes('doe') || t.includes('experiment')) &&
+    (t.includes('top3') || t.includes('top 3') || /\btop\s*[-]?\s*3\b/i.test(raw)) &&
+    (t.includes('md simulation') || t.includes('molecular dynamics') || (t.includes('md') && t.includes('simulation')))
+  const hasDeliverables = (t.includes('docx') || t.includes('pptx') || t.includes('report')) && t.includes('electrolyte') && t.includes('additive')
+
+  // Strong intent trigger for this dedicated demo: allow broad phrasing variance once the pipeline skeleton is present.
+  if (hasCoreDtd && hasSystem && hasVirtualScreening && hasPipelineTail && hasDeliverables) return true
+
+  // Fallback trigger for near-identical user phrasing
+  if (t.includes('virtual screening for 20 similar molecules') && t.includes('top3') && t.includes('md simulation') && t.includes('docx')) {
+    return true
+  }
+  return false
 }
 
 /** name：体系名称；remark：「-」后的卡片备注（展示时与名称分行） */
@@ -954,15 +1020,24 @@ export default function Ask() {
   const mdSimDetailMessage = useMemo(() => {
     if (!taskPanelDetailTask || taskPanelDetailTask.askInlineDetail !== 'mdSim') return null
     const tid = String(taskPanelDetailTask.id)
-    return (
-      messages.find(
-        (m) =>
-          m.role === 'assistant' &&
-          m.block === 'mdSimForm' &&
-          m.submitted &&
-          String(m.taskId || '') === tid
-      ) || null
+    const fromMsg = messages.find(
+      (m) =>
+        m.role === 'assistant' &&
+        m.block === 'mdSimForm' &&
+        m.submitted &&
+        String(m.taskId || '') === tid
     )
+    if (fromMsg) return fromMsg
+    const fd = taskPanelDetailTask.mdSimFormData
+    if (fd && typeof fd === 'object') {
+      return {
+        taskId: tid,
+        formData: fd,
+        progress: taskPanelDetailTask.mdSimProgress || { percent: 12, stage: 'Scheduled', updatedAt: Date.now() },
+        submitted: true,
+      }
+    }
+    return null
   }, [taskPanelDetailTask, messages])
 
   useEffect(() => {
@@ -2383,14 +2458,38 @@ export default function Ask() {
       .filter((t) => t.askConversationId === currentId)
       .sort((a, b) => (getTaskCreatedAtMs(b) ?? 0) - (getTaskCreatedAtMs(a) ?? 0))
     const wantPs = demoVariant === 'ps'
+    const wantDtdEn = demoVariant === 'dtd-en'
     const target =
       kind === 'molecule'
-        ? scoped.find((t) => t.type === 'moleculeSearch' && String(t.similarToLabel || '').toUpperCase() === (wantPs ? 'PS' : 'DTD'))
-        : scoped.find((t) => {
-            if (t.askInlineDetail !== 'electrolyteDesign') return false
-            const title = String(t.title || '')
-            return wantPs ? title.includes('PS') : title.includes('DTD')
+        ? scoped.find((t) => {
+            if (t.type !== 'moleculeSearch') return false
+            const lab = String(t.similarToLabel || '').toUpperCase()
+            if (wantPs) return lab === 'PS'
+            if (wantDtdEn) return lab === 'DTD-VIRTUAL'
+            return lab === 'DTD'
           })
+        : kind === 'md'
+          ? (() => {
+              if (wantDtdEn) {
+                const mdList = scoped.filter((t) => t.askInlineDetail === 'mdSim' && t.dtdVsMdSlot)
+                if (mdList.length > 0) {
+                  return mdList.sort((a, b) => (getTaskCreatedAtMs(a) ?? 0) - (getTaskCreatedAtMs(b) ?? 0))[0]
+                }
+              }
+              return scoped.find((t) => {
+                if (t.askInlineDetail !== 'mdSim') return false
+                if (!wantDtdEn) return false
+                const title = String(t.title || '')
+                return title.includes('DTD virtual screening') && title.includes('Top-3')
+              })
+            })()
+          : scoped.find((t) => {
+              if (t.askInlineDetail !== 'electrolyteDesign') return false
+              const title = String(t.title || '')
+              if (wantPs) return title.includes('PS')
+              if (wantDtdEn) return title.includes('DTD virtual screening')
+              return title.includes('DTD') && !title.includes('virtual screening')
+            })
     if (!target) return
     setTaskListPanelOpen(true)
     setTaskPanelDetailTask(target)
@@ -2412,6 +2511,38 @@ export default function Ask() {
     }
   }
 
+  const triggerLocalFileDownload = async (absolutePath, fileName) => {
+    try {
+      const encodedPath = absolutePath
+        .split('/')
+        .map((seg, idx) => (idx === 0 ? '' : encodeURIComponent(seg)))
+        .join('/')
+      const res = await fetch(`file://${encodedPath}`)
+      if (!res.ok) throw new Error('load local file failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName || absolutePath.split('/').pop() || 'download'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (e) {
+      // Fallback: open local file directly when browser blocks file fetch.
+      const encodedPath = absolutePath
+        .split('/')
+        .map((seg, idx) => (idx === 0 ? '' : encodeURIComponent(seg)))
+        .join('/')
+      const a = document.createElement('a')
+      a.href = `file://${encodedPath}`
+      a.download = fileName || ''
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
+  }
+
   const handleQuickUserReply = (text) => {
     const t = String(text || '').trim()
     if (!t) return
@@ -2426,9 +2557,10 @@ export default function Ask() {
     const text = String(choiceText || '').trim()
     if (!text) return
     handleQuickUserReply(text)
-    if (text === '直接给出完整结果和报告') {
+    if (text === '直接给出完整结果和报告' || text === 'Run full pipeline and deliver reports (Docx, PPTX)') {
       setTimeout(() => {
         if (demoVariant === 'ps') handlePsComplexDirectReportRun()
+        else if (demoVariant === 'dtd-en') handleDtdVirtualScreeningDirectReportRun()
         else handleComplexDirectReportRun()
       }, 220)
     }
@@ -2794,6 +2926,320 @@ export default function Ask() {
     }, 520 * (revealQueue.length + 1))
   }
 
+  const handleDtdVirtualScreeningDirectReportRun = () => {
+    const now = Date.now()
+    const taskId = `MS-dtdvs-${String(now).slice(-6)}`
+    const edTaskId = `ED-dtdvs-${String(now).slice(-6)}`
+    const virtualHits = DTD_VIRTUAL_SCREENING_20.map((mol) => ({
+      ...mol,
+      favPayload: { ...mol.favPayload },
+    }))
+    addTask({
+      id: taskId,
+      type: 'moleculeSearch',
+      category: ASSET_CATEGORY.moleculeSearch,
+      tool: 'Molecule Search',
+      title: `DTD virtual screening · Top 20 similar (virtual) · ${virtualHits.map((m) => m.name).slice(0, 5).join(', ')}…`,
+      listTitle: `Sim · DTD virtual (20)`,
+      queryText: 'Virtual screen 20 DTD-like novel electrolyte additives',
+      meta: 'Ask · DTD virtual screening (EN)',
+      status: 'done',
+      createdAt: now,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      molecules: virtualHits,
+      molecule: virtualHits[0],
+      similarToLabel: 'DTD-VIRTUAL',
+    })
+    addTask({
+      id: edTaskId,
+      type: 'asset',
+      category: ASSET_CATEGORY.electrolyteDesign,
+      tool: 'Electrolyte Design',
+      title: 'Electrolyte Design · DTD virtual screening vs DTD (Top-3 leads, NCM811 / Si–C)',
+      listTitle: 'ED · DTD virtual Top-3',
+      queryText: 'Benchmark Top-3 virtual hits vs DTD baseline',
+      meta: 'Ask · DTD virtual screening electrolyte',
+      status: 'done',
+      createdAt: now + 1,
+      userId: 'U-10001',
+      askConversationId: currentId,
+      askInlineDetail: 'electrolyteDesign',
+      edComparisons: [
+        {
+          id: 'dtdvs-1',
+          title: 'Task · A09 vs DTD (1.0 wt%)',
+          baseline: 'DTD',
+          candidate: 'A09 · trifluoroethyl dioxathiolane dioxide',
+          wtPercent: '1.0%',
+          metrics: { perf25CycleLifeDrop: '5.1%', perf25RateDrop: '0.36%', perf45CycleLifeDrop: '5.6%' },
+        },
+        {
+          id: 'dtdvs-2',
+          title: 'Task · A16 vs DTD (1.0 wt%)',
+          baseline: 'DTD',
+          candidate: 'A16 · TMS-methyl dioxathiolane dioxide',
+          wtPercent: '1.0%',
+          metrics: { perf25CycleLifeDrop: '4.7%', perf25RateDrop: '0.29%', perf45CycleLifeDrop: '5.2%' },
+        },
+        {
+          id: 'dtdvs-3',
+          title: 'Task · A20 vs DTD (1.0 wt%)',
+          baseline: 'DTD',
+          candidate: 'A20 · trifluoromethoxy-methyl dioxathiolane dioxide',
+          wtPercent: '1.0%',
+          metrics: { perf25CycleLifeDrop: '5.4%', perf25RateDrop: '0.33%', perf45CycleLifeDrop: '5.9%' },
+        },
+      ],
+    })
+    ;['A09', 'A16', 'A20'].forEach((code, i) => {
+      const mdTaskId = `MD-dtdvs-${code}-${String(now + i).slice(-6)}`
+      addTask({
+        id: mdTaskId,
+        type: 'asset',
+        category: 'formulate',
+        tool: 'Formulate',
+        title: `MD · DTD screening · ${code} (FEC:EMC 25:75, 1.0 M LiPF6, baseline DTD 1 wt%)`,
+        listTitle: `MD · ${code}`,
+        queryText: `NCM811 / Si–C pack; LiPF6 1.0 M; FEC:EMC 25:75 wt%; baseline DTD 1 wt%; candidate ${code} 1 wt%`,
+        meta: 'Ask · DTD virtual screening MD',
+        status: 'done',
+        createdAt: now + 2 + i,
+        userId: 'U-10001',
+        askConversationId: currentId,
+        askInlineDetail: 'mdSim',
+        dtdVsMdSlot: code,
+        mdSimFormData: buildDtdVirtualScreeningMdSimFormData(code),
+        mdSimProgress: { percent: 18, stage: 'Scheduled', updatedAt: now },
+      })
+    })
+
+    const streamLogs = [
+      {
+        title: '正在启动分析流程…',
+        body: [
+          '已解析任务目标：在目标体系中筛选 DTD 替代添加剂',
+          '执行路径：候选检索 → 性能评估 → 结果收敛 → 验证 → 输出',
+        ],
+      },
+      {
+        title: '正在收敛候选分子…',
+        body: ['已基于 DTD 结构完成相似分子检索', '当前候选规模：约 20 个'],
+      },
+      {
+        title: '正在进行候选筛选…',
+        body: ['已完成基础属性与结构合理性筛选', '当前候选池已收敛，用于后续性能评估'],
+      },
+      {
+        title: '正在进行体系性能评估…',
+        body: [
+          '体系：NCM811 / 硅碳 + 1.2M LiPF6 + EC/EMC（3:7）',
+          '条件：1 wt% / 2 wt% / 5 wt% 添加量',
+          '已完成批量预测计算',
+        ],
+      },
+      {
+        title: '正在进行结果收敛…',
+        body: [
+          '已按「分子 × 添加量」整理结果',
+          '正在基于极化、倍率与循环稳定性筛选候选',
+          '当前已收敛至 Top 2–3 分子',
+        ],
+      },
+      {
+        title: '正在进行 MD 验证…',
+        body: ['已生成 Top 候选分子的 MD 输入', '当前状态：已安排（执行中）', '用于验证预测结果的可靠性'],
+      },
+      {
+        title: '正在生成分析结果与报告…',
+        body: [
+          '已综合性能预测结果',
+          '正在生成：',
+          '>> 候选推荐与添加量建议',
+          '>> 机理解释（成膜 / 溶剂化）',
+          '>> DOE 实验设计',
+          '同步生成报告文件（docx / pptx / xlsx）',
+        ],
+      },
+    ]
+    const pipelineSteps = streamLogs.map((section, idx) => ({
+      headline: section.title,
+      items: section.body,
+      detail: '',
+      streaming: idx === 0,
+      expanded: false,
+      visibleItems: 0,
+      visible: idx === 0,
+    }))
+    const msgId = Date.now() + 1
+    appendAssistantMessage({
+      id: msgId,
+      role: 'assistant',
+      block: 'dtdVirtualScreeningExecution',
+      content: streamLogs[0].title,
+      taskId,
+      thinkingDone: false,
+      pipelineCollapsed: false,
+      pipelineSteps,
+      showPlanCard: false,
+    })
+
+    const revealQueue = streamLogs.flatMap((section, sectionIdx) =>
+      (section.body || []).map((_, itemIdx) => ({
+        sectionIdx,
+        visibleItems: itemIdx + 1,
+      }))
+    )
+
+    revealQueue.forEach((entry, idx) => {
+      setTimeout(() => {
+        const isSectionDone = entry.visibleItems >= (streamLogs[entry.sectionIdx]?.body?.length || 0)
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === entry.sectionIdx,
+            expanded: i === entry.sectionIdx ? true : s.expanded,
+            visibleItems: i === entry.sectionIdx ? Math.max(Number(s.visibleItems || 0), entry.visibleItems) : s.visibleItems,
+            visible: i <= entry.sectionIdx || (isSectionDone && i === entry.sectionIdx + 1) ? true : s.visible,
+          })),
+        }))
+      }, 520 * (idx + 1))
+    })
+
+    setTimeout(() => {
+      updateMessageById(currentId, msgId, (m) => ({
+        ...m,
+        thinkingDone: true,
+        content: '执行流程已完成，正在整理完整结果与报告。',
+        pipelineCollapsed: true,
+        pipelineSteps: (m.pipelineSteps || []).map((s) => ({ ...s, streaming: false })),
+      }))
+    }, 520 * (revealQueue.length + 1))
+  }
+
+  const handleDtdVirtualScreeningEnglishDemo = (questionText) => {
+    const thinkingLines = [
+      'Parsing your request…',
+      'You want novel electrolyte additives (not yet published/manufactured) to replace DTD for NCM811 / silicon–carbon cells.',
+      'You asked for: virtual screening (20 similar) → prediction → designed experiments → Top-3 to MD → Docx/PPTX report.',
+      'This session uses a standalone execution template (not copied from other demos).',
+      'I will flag any missing electrochemical parameters before locking the benchmark matrix.',
+      'When you are ready, run the full pipeline to materialize tasks and downloads.',
+    ]
+    const roadmap = [
+      { skill: 'Molecule Find Similar', detail: 'Seed = DTD; expand to 20 virtual, not-yet-commercial hits.' },
+      { skill: 'Performance Predict', detail: 'Descriptor stack + compatibility gates for Si–C + high-Ni pairing.' },
+      { skill: 'Electrolyte Design', detail: 'Top-3 vs DTD baseline under a harmonized electrolyte recipe.' },
+      { skill: 'Formulate (MD)', detail: 'Package solvated cells for polarizable MD on the Top-3 leads.' },
+      { skill: 'Reporting', detail: 'Auto-generate Docx + PPTX executive summaries with evidence tables.' },
+    ]
+    const skills = [
+      { name: 'Molecule Find Similar', input: 'Seed=DTD; K=20; novelty filter=publish/manufacture=false (demo)' },
+      { name: 'Performance Predict', input: 'Graph surrogate + redox/transport proxies; uncertainty bands on' },
+      { name: 'Electrolyte Design', input: 'System=NCM811/Si–C; baseline vs Top-3; wt% pending user confirmation' },
+      { name: 'Formulate (MD)', input: 'Top-3 structures → solvate → polarizable FF → interfacial sampling' },
+      { name: 'Reporting', input: 'Docx technical brief + PPTX storyline for leadership review' },
+    ]
+    const streamLogs = [
+      {
+        title:
+          '首先，我会把这个任务当作一个以新颖性优先的筛选问题来处理：目标是找到与 DTD 功能相似，但不局限于已有商品或已发表分子的候选体系。',
+        body: [''],
+      },
+      {
+        title:
+          '接下来，我会先进行一轮虚拟筛选，收敛约 20 个结构相近的候选分子，并通过预测模型进行打分筛选，从中选出最有潜力的 Top 3，用于后续更高成本的 MD 验证。',
+        body: [''],
+      },
+      {
+        title:
+          '在完成预测之后，我会将筛选出的候选转化为可执行的实验方案，包括电解液组成、添加量以及 formation 条件等，形成明确的实验设计矩阵。',
+        body: [''],
+      },
+      {
+        title:
+          '最后，我会整理完整输出，包括 MD 所需输入文件，以及 docx / pptx 报告，同时明确列出当前仍缺失、需要你补充的关键参数。',
+        body: [''],
+      },
+    ]
+    const pipelineSteps = streamLogs.map((section, idx) => ({
+      headline: section.title,
+      items: section.body,
+      detail: '',
+      streaming: idx === 0,
+      expanded: false,
+      visibleItems: 0,
+      visible: idx === 0,
+    }))
+
+    const msgId = Date.now() + 1
+    appendAssistantMessage({
+      id: msgId,
+      role: 'assistant',
+      block: 'dtdVirtualScreeningResearch',
+      content: thinkingLines[0],
+      thinkingLines,
+      thinkingIndex: 0,
+      thinkingDone: false,
+      thinkingExpanded: true,
+      pipelineCollapsed: false,
+      pipelineSteps,
+      showPlanCard: true,
+      roadmapExpanded: true,
+      roadmap,
+      skills,
+      questionText,
+    })
+
+    thinkingLines.forEach((line, idx) => {
+      setTimeout(() => {
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          thinkingIndex: idx,
+          content: line,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === Math.min(idx, (m.pipelineSteps || []).length - 1),
+          })),
+        }))
+      }, 750 * (idx + 1))
+    })
+
+    const revealQueue = streamLogs.flatMap((section, sectionIdx) =>
+      (section.body || []).map((_, itemIdx) => ({
+        sectionIdx,
+        visibleItems: itemIdx + 1,
+      }))
+    )
+
+    revealQueue.forEach((entry, idx) => {
+      setTimeout(() => {
+        const isSectionDone = entry.visibleItems >= (streamLogs[entry.sectionIdx]?.body?.length || 0)
+        updateMessageById(currentId, msgId, (m) => ({
+          ...m,
+          pipelineSteps: (m.pipelineSteps || []).map((s, i) => ({
+            ...s,
+            streaming: i === entry.sectionIdx,
+            expanded: i === entry.sectionIdx ? true : s.expanded,
+            visibleItems: i === entry.sectionIdx ? Math.max(Number(s.visibleItems || 0), entry.visibleItems) : s.visibleItems,
+            visible: i <= entry.sectionIdx || (isSectionDone && i === entry.sectionIdx + 1) ? true : s.visible,
+          })),
+        }))
+      }, 520 * (idx + 1))
+    })
+
+    setTimeout(() => {
+      updateMessageById(currentId, msgId, (m) => ({
+        ...m,
+        thinkingDone: true,
+        content: 'Planning complete. Confirm the run when you are ready.',
+        pipelineCollapsed: true,
+        pipelineSteps: (m.pipelineSteps || []).map((s) => ({ ...s, streaming: false })),
+      }))
+    }, 520 * (revealQueue.length + 1))
+  }
+
   const handleFastChargeComplexDemo = (questionText) => {
     const thinkingLines = [
       '正在理解你的研究目标…',
@@ -2838,23 +3284,51 @@ export default function Ask() {
     ]
     const streamLogs = [
       {
-        title: '我先简单梳理一下这个问题：你的目标不是单纯替换DTD，而是在45–60°C高温下提升体系稳定性',
+        title: '我先简单梳理一下这个问题：',
         body: [''],
       },
       {
-        title: '这里我会先把路径拆开：可以做结构替代，也可以考虑功能型添加剂，或者直接走组合方案',
+        title: '你的目标不是单纯替换 DTD，而是在 NCM811 / 硅碳体系 + 快充工况下，找到更适合高倍率条件的电解液添加剂。',
         body: [''],
       },
       {
-        title: '从经验来看，单一替代在高温下不太稳，更可能需要从功能上拆开来分析',
+        title: '这个问题本质上不是“找一个最像 DTD 的分子”，而是一个候选空间收敛 + 多指标筛选 + 方案判断的问题。',
         body: [''],
       },
       {
-        title: '接下来我会先筛一批候选，再重点看它们在高温下的表现',
+        title: '从路径上可以拆成几种可能：',
         body: [''],
       },
       {
-        title: '最后再判断，是做DTD替代，还是给一套组合方案更合理',
+        title: '• 可以做结构相似分子替代',
+        body: [''],
+      },
+      {
+        title: '• 也可以从功能出发（成膜 / 溶剂化调控）',
+        body: [''],
+      },
+      {
+        title: '• 最终结果也可能不是单一替代，而是一种更优的组合策略',
+        body: [''],
+      },
+      {
+        title: '考虑到在高倍率条件下，单一添加剂往往很难同时兼顾多个性能指标，后面判断时需要重点看：',
+        body: [''],
+      },
+      {
+        title: '• 极化行为',
+        body: [''],
+      },
+      {
+        title: '• 倍率保持',
+        body: [''],
+      },
+      {
+        title: '• 循环稳定性',
+        body: [''],
+      },
+      {
+        title: '所以接下来我会先收敛一批候选分子，然后重点看它们在快充工况下的表现，再基于结果做筛选判断，最后收敛为可落地的推荐方案。',
         body: [''],
       },
     ]
@@ -3419,6 +3893,18 @@ export default function Ask() {
             ))}
           </ul>
         )}
+        {Array.isArray(fd.mdPackLines) && fd.mdPackLines.length > 0 ? (
+          <>
+            <div className="ask-md-input-subhead">电解液与添加剂（MD 输入摘要）</div>
+            <ul className="ask-md-input-solvents">
+              {fd.mdPackLines.map((line, i) => (
+                <li key={i}>
+                  <span className="ask-md-input-smi">{line}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </div>
     )
   }
@@ -3487,6 +3973,11 @@ export default function Ask() {
 
     if (isPsFastChargeDemoIntent(userContent)) {
       handlePsFastChargeComplexDemo(userContent)
+      return
+    }
+
+    if (isDtdVirtualScreeningEnglishDemoIntent(userContent)) {
+      handleDtdVirtualScreeningEnglishDemo(userContent)
       return
     }
 
@@ -5401,7 +5892,9 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                   {(msg.block === 'complexFastChargeResearch' ||
                     msg.block === 'complexFastChargeExecution' ||
                     msg.block === 'complexPsFastChargeResearch' ||
-                    msg.block === 'complexPsFastChargeExecution') && (
+                    msg.block === 'complexPsFastChargeExecution' ||
+                    msg.block === 'dtdVirtualScreeningResearch' ||
+                    msg.block === 'dtdVirtualScreeningExecution') && (
                     <div className="ask-fastcharge-demo">
                       <div className={`ask-lit-pipeline-card ${msg.pipelineCollapsed ? 'ask-lit-pipeline-card--collapsed' : ''}`}>
                         <div className="ask-lit-pipeline-head ask-lit-pipeline-head--row">
@@ -5409,9 +5902,15 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                             <div className="ask-lit-pipeline-head-text">
                               <span className="ask-lit-pipeline-title">Thinking & Analysis</span>
                               <span className="ask-lit-pipeline-sub">
-                                {msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution'
-                                  ? '正在执行任务流程（可查看进度）…'
-                                  : '正在分析问题并制定方案…'}
+                                {msg.block === 'complexFastChargeExecution' ||
+                                msg.block === 'complexPsFastChargeExecution' ||
+                                msg.block === 'dtdVirtualScreeningExecution'
+                                  ? msg.block === 'dtdVirtualScreeningExecution'
+                                    ? 'Running the pipeline (task links on key steps)…'
+                                    : '正在执行任务流程（可查看进度）…'
+                                  : msg.block === 'dtdVirtualScreeningResearch'
+                                    ? 'Analyzing the request and drafting an execution plan…'
+                                    : '正在分析问题并制定方案…'}
                               </span>
                             </div>
                           </div>
@@ -5428,7 +5927,9 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                           className={`ask-lit-pipeline-steps ${msg.pipelineCollapsed ? 'ask-lit-pipeline-steps--collapsed' : ''}`}
                           hidden={!!msg.pipelineCollapsed}
                         >
-                          {msg.block === 'complexFastChargeResearch' || msg.block === 'complexPsFastChargeResearch' ? (
+                          {msg.block === 'complexFastChargeResearch' ||
+                          msg.block === 'complexPsFastChargeResearch' ||
+                          msg.block === 'dtdVirtualScreeningResearch' ? (
                             <div className="ask-lit-plain-stream">
                               <p className="ask-lit-plain-line">
                                 {(msg.pipelineSteps || [])
@@ -5502,32 +6003,56 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                                         ))}
                                       </ul>
                                     ) : null}
-                                    {(msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution') &&
-                                    step.headline === '正在检索候选分子…' ? (
+                                    {(((msg.block === 'complexFastChargeExecution' ||
+                                      msg.block === 'complexPsFastChargeExecution') &&
+                                      step.headline === '正在检索候选分子…') ||
+                                      (msg.block === 'dtdVirtualScreeningExecution' &&
+                                        step.headline === '正在收敛候选分子…')) ? (
                                       <button
                                         type="button"
                                         className="ask-lit-step-tasklink"
                                         onClick={() =>
                                           handleComplexExecutionOpenTask(
                                             'molecule',
-                                            msg.block === 'complexPsFastChargeExecution' ? 'ps' : 'dtd'
+                                            msg.block === 'complexPsFastChargeExecution'
+                                              ? 'ps'
+                                              : msg.block === 'dtdVirtualScreeningExecution'
+                                                ? 'dtd-en'
+                                                : 'dtd'
                                           )
                                         }
                                       >
                                         查看task
                                       </button>
                                     ) : null}
-                                    {(msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution') &&
-                                    step.headline === '正在构建配方并评估表现…' ? (
+                                    {(((msg.block === 'complexFastChargeExecution' ||
+                                      msg.block === 'complexPsFastChargeExecution') &&
+                                      step.headline === '正在构建配方并评估表现…') ||
+                                      (msg.block === 'dtdVirtualScreeningExecution' &&
+                                        step.headline === '正在进行体系性能评估…')) ? (
                                       <button
                                         type="button"
                                         className="ask-lit-step-tasklink"
                                         onClick={() =>
                                           handleComplexExecutionOpenTask(
                                             'electrolyte',
-                                            msg.block === 'complexPsFastChargeExecution' ? 'ps' : 'dtd'
+                                            msg.block === 'complexPsFastChargeExecution'
+                                              ? 'ps'
+                                              : msg.block === 'dtdVirtualScreeningExecution'
+                                                ? 'dtd-en'
+                                                : 'dtd'
                                           )
                                         }
+                                      >
+                                        查看task
+                                      </button>
+                                    ) : null}
+                                    {(msg.block === 'dtdVirtualScreeningExecution' &&
+                                      step.headline === '正在进行 MD 验证…') ? (
+                                      <button
+                                        type="button"
+                                        className="ask-lit-step-tasklink"
+                                        onClick={() => handleComplexExecutionOpenTask('md', 'dtd-en')}
                                       >
                                         查看task
                                       </button>
@@ -5650,6 +6175,114 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                                 </button>
                               </div>
                             </>
+                          ) : msg.block === 'dtdVirtualScreeningResearch' ? (
+                            <>
+                              <p className="ask-msg-para">我理解你的目标是：</p>
+                              <p className="ask-msg-para">
+                                在 NCM811 / 硅碳体系中，寻找可以替代 DTD 的电解液添加剂，并优先适用于快充工况（高倍率），希望在以下指标上有更优表现：
+                              </p>
+                              <ul className="ask-msg-list">
+                                <li>降低极化</li>
+                                <li>提升倍率性能</li>
+                                <li>提升循环稳定性</li>
+                              </ul>
+                              <p className="ask-msg-para">同时希望候选分子具备一定的新颖性（未被广泛应用）。</p>
+
+                              <p className="ask-msg-para">针对这个任务，我建议按“逐步收敛”的方式来处理：</p>
+                              <p className="ask-msg-para">
+                                这个问题不适合直接当作“单一分子替代”来处理，而更适合拆成一个分阶段筛选 + 评估 + 决策的流程：
+                              </p>
+
+                              <h4>分析思路</h4>
+                              <p className="ask-msg-para">针对这个任务，整体思路会分成几个判断过程：</p>
+                              <p className="ask-msg-para">
+                                首先，我会从 DTD 出发，先找到一批结构或功能上相近的候选分子，作为一个初始的探索空间，而不是一开始就限定某一个答案。
+                              </p>
+                              <p className="ask-msg-para">
+                                接下来需要判断的是，这个问题是不是一个“单一分子替代问题”。很多情况下，一个分子很难同时兼顾成膜和稳定性，所以也要考虑是否需要通过功能拆分或组合来解决，而不是只盯着“谁最像 DTD”。
+                              </p>
+                              <p className="ask-msg-para">
+                                然后，关键的一步是把这些候选真正放到目标体系里去看表现。单看结构是远远不够的，必须结合具体工况下的表现，比如极化、倍率、循环稳定性，才能判断这些分子是否真的适合快充体系。
+                              </p>
+                              <p className="ask-msg-para">
+                                在有了这些对比之后，再去收敛出少量更有潜力的候选，同时判断它们更合适的添加量区间。
+                              </p>
+                              <p className="ask-msg-para">
+                                最后，再基于这些结果做一个合理解释：为什么这些分子表现更好，以及下一步如果要落到实验，应该怎么设计验证路径。
+                              </p>
+
+                              <div className="ask-orchestrate-block">
+                              <h4>任务流程</h4>
+                              <p className="ask-msg-para ask-orchestrate-lead">本次任务预计按以下流程执行：</p>
+                              <div className="ask-fastcharge-skill-grid ask-fastcharge-skill-grid--orchestrate-v2">
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 1 | 候选检索 <span className="ask-fastcharge-skill-label">Molecule Find Similar</span>
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    调用 Molecule Find Similar（search / recommend）→ 基于 DTD 结构收敛候选分子（约 20 个）。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 2 | 候选筛选
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    规则筛选 + 基础属性过滤 → 去除明显不适合快充体系的候选。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 3 | 体系性能评估 <span className="ask-fastcharge-skill-label">Electrolyte Design / 性能预测</span>
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    在 NCM811 / 硅碳 + 1.2M LiPF6 + EC/EMC（3:7）体系下，对 1 wt% / 2 wt% / 5 wt% 三个添加量进行批量预测。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">Step 4 | 方案收敛</div>
+                                  <div className="ask-fastcharge-skill-input">
+                                    基于性能结果筛选 Top 2–3 分子，并判断最优添加量。
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 5｜MD验证 <span className="ask-fastcharge-skill-label">Formulate (MD)</span>
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">对 Top 候选进行分子动力学模拟验证。</div>
+                                </div>
+                                <div className="ask-fastcharge-skill-card">
+                                  <div className="ask-fastcharge-skill-name">
+                                    Step 6｜分析 & 结果交付 <span className="ask-fastcharge-skill-label">SES-LLM / 分析 skill</span>
+                                  </div>
+                                  <div className="ask-fastcharge-skill-input">综合预测结果，输出完整方案。</div>
+                                </div>
+                              </div>
+                              </div>
+
+                              <h4>小结</h4>
+                              <p className="ask-msg-para">
+                                整体来看，这个问题的关键不是“找到一个最像 DTD 的分子”，而是：在一批候选中，通过快充表现筛选出真正适合该工况的方案。
+                              </p>
+                              <h4>下一步</h4>
+                              <p className="ask-msg-para ask-fastcharge-choice-lead">你可以选择：</p>
+                              <div className="ask-fastcharge-choice-actions">
+                                <button
+                                  type="button"
+                                  className="ask-fastcharge-choice-btn"
+                                  onClick={() => handleComplexDemoChoiceReply('直接给出完整结果和报告', 'dtd-en')}
+                                >
+                                  直接给出完整结果和报告
+                                </button>
+                                <button
+                                  type="button"
+                                  className="ask-fastcharge-choice-btn"
+                                  onClick={() => handleComplexDemoChoiceReply('分步执行，在关键节点让你确认后继续', 'dtd-en')}
+                                >
+                                  分步执行，在关键节点让你确认后继续
+                                </button>
+                              </div>
+                            </>
                           ) : (
                             <>
                               <p className="ask-msg-para">我理解你的目标是：</p>
@@ -5726,7 +6359,10 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                           )}
                         </div>
                       )}
-                      {msg.thinkingDone && (msg.block === 'complexFastChargeExecution' || msg.block === 'complexPsFastChargeExecution') && (
+                      {msg.thinkingDone &&
+                        (msg.block === 'complexFastChargeExecution' ||
+                          msg.block === 'complexPsFastChargeExecution' ||
+                          msg.block === 'dtdVirtualScreeningExecution') && (
                         <div className="ask-fastcharge-plan-card">
                           {msg.block === 'complexPsFastChargeExecution' ? (
                             <>
@@ -5831,6 +6467,183 @@ report = synthesize_with_assets(life_pred, citations=corpus_aligned_spans)`}</co
                                     '把 1%/2%/5% 的结果整理成一张相对 PS 的雷达对比图（极化/倍率/循环）。',
                                     '如果产气异常，优先从哪一档浓度回退、如何改 DOE？',
                                     '在同样 2% 负载下，1,3-BS 与 PS 的机理差异该怎么用实验证伪？',
+                                  ].map((q) => (
+                                    <button
+                                      key={q}
+                                      type="button"
+                                      className="ask-fastcharge-recoq-chip"
+                                      onClick={() => handleQuickUserReply(q)}
+                                    >
+                                      {q}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          ) : msg.block === 'dtdVirtualScreeningExecution' ? (
+                            <>
+                              <p className="ask-msg-para">
+                                我已经帮你完成这一轮候选筛选、性能评估和方案收敛，下面是核心结论和可落地建议：
+                              </p>
+                              <h4>一、参数体系说明（本轮基线）</h4>
+                              <p className="ask-msg-para">本轮使用了一套全新默认参数（未复用历史设计）：</p>
+                              <ul className="ask-msg-list">
+                                <li>
+                                  电解液：1.0 M LiPF<sub>6</sub> in EC:EMC = 25:75
+                                </li>
+                                <li>DTD 基线：1.0 wt%</li>
+                                <li>电池体系：NCM811 / 硅碳</li>
+                                <li>硅含量：10 wt%</li>
+                                <li>N/P：1.10</li>
+                                <li>电压窗口：2.8–4.35 V</li>
+                              </ul>
+                              <p className="ask-msg-para">该参数体系偏向快充场景，适合作为初筛基线。</p>
+                              <h4>二、候选分子筛选结果</h4>
+                              <p className="ask-msg-para">基于：</p>
+                              <ul className="ask-msg-list">
+                                <li>DTD 结构相似性</li>
+                                <li>新颖性过滤（无明显文献/商业来源）</li>
+                              </ul>
+                              <p className="ask-msg-para">共筛选出：</p>
+                              <p className="ask-msg-para">20 个候选分子</p>
+                              <h4>🏆 推荐 Top 3</h4>
+                              <div className="ask-fastcharge-reco-grid">
+                                <div className="ask-fastcharge-reco-card ask-fastcharge-reco-card--primary">
+                                  <div className="ask-fastcharge-reco-name">🥇 A09</div>
+                                  <div className="ask-fastcharge-reco-body">
+                                    4-(2,2,2-trifluoroethyl)-1,3,2-dioxathiolane 2,2-dioxide
+                                    <p className="ask-msg-para ask-msg-para--nested">特点：</p>
+                                    <ul className="ask-msg-list ask-msg-list--nested">
+                                      <li>快充条件下极化较低</li>
+                                      <li>倍率表现相对稳定</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-reco-card ask-fastcharge-reco-card--secondary">
+                                  <div className="ask-fastcharge-reco-name">🥈 A16</div>
+                                  <div className="ask-fastcharge-reco-body">
+                                    4-(trimethylsilyl)methyl-1,3,2-dioxathiolane 2,2-dioxide
+                                    <p className="ask-msg-para ask-msg-para--nested">特点：</p>
+                                    <ul className="ask-msg-list ask-msg-list--nested">
+                                      <li>循环稳定性更好</li>
+                                      <li>副反应控制能力较强</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                                <div className="ask-fastcharge-reco-card">
+                                  <div className="ask-fastcharge-reco-name">🥉 A20</div>
+                                  <div className="ask-fastcharge-reco-body">
+                                    4-(trifluoromethoxy)methyl-1,3,2-dioxathiolane 2,2-dioxide
+                                    <p className="ask-msg-para ask-msg-para--nested">特点：</p>
+                                    <ul className="ask-msg-list ask-msg-list--nested">
+                                      <li>各项性能表现均衡</li>
+                                      <li>作为稳健备选</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="ask-msg-para">候补分子：A10（更保守方案）</p>
+                              <h4>三、性能趋势总结（关键规律）</h4>
+                              <ol className="ask-msg-list">
+                                <li>
+                                  <strong>1️⃣ 添加量敏感性强</strong>
+                                  <p className="ask-msg-para ask-msg-para--nested">≥2 wt%：</p>
+                                  <ul className="ask-msg-list ask-msg-list--nested">
+                                    <li>极化明显增加</li>
+                                    <li>倍率性能下降</li>
+                                  </ul>
+                                  <p className="ask-msg-para ask-msg-para--nested">不建议高添加量使用</p>
+                                </li>
+                                <li>
+                                  <strong>2️⃣ 最优窗口集中在低添加量</strong>
+                                  <p className="ask-msg-para ask-msg-para--nested">1 wt% 是主要可用区间</p>
+                                </li>
+                                <li>
+                                  <strong>3️⃣ 整体表现结论</strong>
+                                  <p className="ask-msg-para ask-msg-para--nested">
+                                    当前候选整体没有明显优于基线，但存在“可替代窗口”
+                                  </p>
+                                </li>
+                              </ol>
+                              <h4>四、机理判断（简要）</h4>
+                              <p className="ask-msg-para">当前推荐逻辑是：</p>
+                              <p className="ask-msg-para">
+                                在保留 DTD 环结构成膜能力的基础上，通过侧链结构调控 SEI / CEI 行为
+                              </p>
+                              <p className="ask-msg-para">可以理解为：</p>
+                              <ul className="ask-msg-list">
+                                <li>保留核心功能（成膜）</li>
+                                <li>优化副作用（阻抗 / 副反应）</li>
+                              </ul>
+                              <h4>五、DOE 实验设计（可直接执行）</h4>
+                              <p className="ask-msg-para">
+                                <strong>Stage 1｜基础验证</strong>
+                              </p>
+                              <ul className="ask-msg-list">
+                                <li>体系：blank / DTD / A09 / A16 / A20 / A10</li>
+                                <li>添加量：1 wt%</li>
+                                <li>重复：n = 3</li>
+                              </ul>
+                              <p className="ask-msg-para">
+                                <strong>Stage 2｜参数优化</strong>
+                              </p>
+                              <ul className="ask-msg-list">
+                                <li>Top 3 × 添加量 × 电解液参数组合</li>
+                                <li>共 27 组实验矩阵 + 3 组对照</li>
+                              </ul>
+                              <p className="ask-msg-para">已整理为结构化实验方案，可直接用于实验安排</p>
+                              <h4>六、结论与建议</h4>
+                              <p className="ask-msg-para">当前最优策略：</p>
+                              <ul className="ask-msg-list">
+                                <li>优先验证：A09 / A16 @ 1 wt%</li>
+                                <li>A20 / A10 作为保守备选</li>
+                              </ul>
+                              <p className="ask-msg-para">如果目标是：</p>
+                              <p className="ask-msg-para">✔ 稳定替代</p>
+                              <p className="ask-msg-para">→ 当前方案可以直接推进实验验证</p>
+                              <p className="ask-msg-para">✔ 性能突破</p>
+                              <p className="ask-msg-para">→ 建议下一轮：</p>
+                              <ul className="ask-msg-list">
+                                <li>扩展结构空间（非 DTD 衍生）</li>
+                                <li>或尝试功能型添加剂组合</li>
+                              </ul>
+                              <div className="ask-fastcharge-attach">
+                                <div className="ask-fastcharge-attach-title">附件下载</div>
+                                <div className="ask-fastcharge-attach-list">
+                                  <button
+                                    type="button"
+                                    className="ask-fastcharge-attach-item"
+                                    onClick={() => {
+                                      triggerLocalFileDownload(
+                                        '/Users/chenyuhe/Downloads/demo/DTD_replacement_virtual_screening_report.docx',
+                                        'DTD_replacement_virtual_screening_report.docx'
+                                      )
+                                    }}
+                                  >
+                                    DTD_replacement_virtual_screening_report.docx
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="ask-fastcharge-attach-item"
+                                    onClick={() => {
+                                      triggerLocalFileDownload(
+                                        '/Users/chenyuhe/Downloads/demo/DTD_replacement_virtual_screening_deck.pptx',
+                                        'DTD_replacement_virtual_screening_deck.pptx'
+                                      )
+                                    }}
+                                  >
+                                    DTD_replacement_virtual_screening_deck.pptx
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="ask-fastcharge-recoq">
+                                <div className="ask-fastcharge-recoq-title">推荐问题</div>
+                                <div className="ask-fastcharge-recoq-chips">
+                                  {[
+                                    '按 Top 3 合成优先级排一版（原料可得性 + 路线复杂度）。',
+                                    '输出一版风险评估矩阵（安全、成本、工艺窗口）。',
+                                    '把 Stage 1 / Stage 2 细化成第一轮实验执行表（lab sheet）。',
                                   ].map((q) => (
                                     <button
                                       key={q}
