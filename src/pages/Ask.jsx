@@ -610,6 +610,42 @@ const isDtdVirtualScreeningEnglishDemoIntent = (text) => {
   return false
 }
 
+/** 中文 DTD 虚拟筛选 demo：覆盖“新型添加剂 + 20候选 + Top3 MD + docx/pptx + 不复用已有设计” */
+const isDtdVirtualScreeningChineseDemoIntent = (text) => {
+  const raw = String(text || '')
+  if (!raw) return false
+  const t = raw.toLowerCase()
+  const hasCore =
+    (raw.includes('新的电解液添加剂') || raw.includes('新型电解质添加剂')) &&
+    raw.includes('替代') &&
+    t.includes('dtd') &&
+    t.includes('ncm811') &&
+    raw.includes('硅碳')
+  const hasPipeline =
+    (raw.includes('20 个候选') || raw.includes('20个候选') || raw.includes('20个相似分子') || raw.includes('20 个相似分子')) &&
+    raw.includes('虚拟筛选') &&
+    raw.includes('预测') &&
+    raw.includes('实验设计') &&
+    (raw.includes('top 3') || raw.includes('top3') || raw.includes('Top 3') || raw.includes('Top3')) &&
+    (raw.includes('md 模拟') || raw.includes('MD 模拟') || raw.includes('分子动力学')) &&
+    t.includes('docx') &&
+    t.includes('pptx')
+  const hasConstraint = raw.includes('不要用之前已有的设计') || raw.includes('不要使用其他已有的设计') || raw.includes('不要使用之前设计')
+  if (hasCore && hasPipeline && hasConstraint) return true
+
+  // Relaxed hard fallback for long-form Chinese requests to avoid routing to MD form by mistake.
+  const hasStrongDtdDemoSignature =
+    t.includes('dtd') &&
+    t.includes('ncm811') &&
+    raw.includes('硅碳') &&
+    (raw.includes('top 3') || raw.includes('top3') || raw.includes('Top 3') || raw.includes('Top3')) &&
+    (t.includes('docx') || t.includes('pptx')) &&
+    (raw.includes('虚拟筛选') || raw.includes('筛一批')) &&
+    (raw.includes('20') || raw.includes('二十')) &&
+    (raw.includes('md') || raw.includes('MD') || raw.includes('分子动力学'))
+  return hasStrongDtdDemoSignature
+}
+
 /** name：体系名称；remark：「-」后的卡片备注（展示时与名称分行） */
 const ELECTROLYTE_DESIGN_SYSTEMS = [
   { id: 'ncm811-100si', name: 'NCM811-100% Si-C', remark: 'Carbonate electrolyte', disabled: false },
@@ -1456,6 +1492,16 @@ export default function Ask() {
   const isMDSimIntent = (text) => {
     const t = text.trim()
     if (!t) return false
+    const lower = t.toLowerCase()
+    const looksLikeDtdVirtualScreeningRequest =
+      lower.includes('dtd') &&
+      lower.includes('ncm811') &&
+      t.includes('硅碳') &&
+      (t.includes('20 个') || t.includes('20个') || t.includes('20')) &&
+      lower.includes('docx') &&
+      lower.includes('pptx') &&
+      (t.includes('替代') || lower.includes('replace'))
+    if (looksLikeDtdVirtualScreeningRequest) return false
     // Match either exact phrasing in requirement or close variants.
     return (
       t.includes('MD模拟') ||
@@ -3941,6 +3987,17 @@ export default function Ask() {
     }))
     setInput('')
 
+    // Hard routing guard: always prioritize DTD virtual-screening demo requests
+    // over generic MD intent when user asks for the full screening->prediction->report pipeline.
+    if (isDtdVirtualScreeningChineseDemoIntent(userContent)) {
+      handleDtdVirtualScreeningEnglishDemo(userContent)
+      return
+    }
+    if (isDtdVirtualScreeningEnglishDemoIntent(userContent)) {
+      handleDtdVirtualScreeningEnglishDemo(userContent)
+      return
+    }
+
     // Demo: natural-language form fill in electrolyte design config step.
     const activeConfigMsg = [...(conv.messages || [])]
       .reverse()
@@ -3973,11 +4030,6 @@ export default function Ask() {
 
     if (isPsFastChargeDemoIntent(userContent)) {
       handlePsFastChargeComplexDemo(userContent)
-      return
-    }
-
-    if (isDtdVirtualScreeningEnglishDemoIntent(userContent)) {
-      handleDtdVirtualScreeningEnglishDemo(userContent)
       return
     }
 
