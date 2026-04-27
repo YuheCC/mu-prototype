@@ -113,7 +113,7 @@ const SIDEBAR_BY_TEMPLATE = {
     title: 'Life Prediction (Predict Skill)',
     subtitle: '模型 · 寿命预测',
     fields: [
-      { id: 'model', label: '模型版本', placeholder: 'MU Agent 4.27-LifePredict v2.4' },
+      { id: 'model', label: '模型版本', placeholder: 'MU Agent-LifePredict v2.4' },
       { id: 'infer', label: '推理参数', placeholder: 'cycles_used=200, confidence=0.95' },
     ],
   },
@@ -440,7 +440,7 @@ export default function WorkflowArchitectCanvas({ open, onClose, onActivated }) 
                     }}
                   >
                     <div className="wa-node-brand">
-                      <span className="wa-node-logo">MU Agent 4.27</span>
+                      <span className="wa-node-logo">MU Agent</span>
                       <span className="wa-node-role">{tpl.role}</span>
                     </div>
                     <div className="wa-node-mid">

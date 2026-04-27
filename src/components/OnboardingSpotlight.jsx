@@ -16,7 +16,7 @@ const STEP_COPY = {
   },
   [TOUR_STEP.LITERATURE_PICK]: {
     stepLabel: '文献助手',
-    body: '在回答卡片下方点击「MU Agent 4.27 文献助手」，进入可配置的研究流水线。',
+    body: '在回答卡片下方点击「MU Agent 文献助手」，进入可配置的研究流水线。',
   },
   [TOUR_STEP.LITERATURE_FORM]: {
     stepLabel: '研究配置',

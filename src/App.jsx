@@ -201,7 +201,7 @@ function App() {
                 <NewUserDemoModal />
                 <OnboardingSpotlight />
                 <header className="topbar">
-                  <span className="logo">MU Agent 4.27</span>
+                  <span className="logo">MU Agent</span>
                   <div className="topbar-nav-cluster">
                     <nav className="top-nav">
                       <NavLink
