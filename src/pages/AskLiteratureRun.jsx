@@ -38,7 +38,7 @@ export default function LiteratureRunBlock({ msg, onToggleStepDetail }) {
     <div className={`ask-lit-pipeline-card ${cardCollapsed ? 'ask-lit-pipeline-card--collapsed' : ''}`}>
       <div className="ask-lit-pipeline-head ask-lit-pipeline-head--row">
         <div className="ask-lit-pipeline-head-main">
-          <span className="ask-lit-pipeline-badge">MU Literature</span>
+          <span className="ask-lit-pipeline-badge">MU Agent 4.27 Literature</span>
           <div className="ask-lit-pipeline-head-text">
             <span className="ask-lit-pipeline-title">Agent pipeline</span>
             <span className="ask-lit-pipeline-sub">Streaming trace · expand any step for methodology detail</span>

@@ -48,8 +48,8 @@ const GROUPS = [
     title: 'Third-party Systems',
     icon: '🔗',
     tools: [
-      { name: 'ERP', desc: 'Integrate MU workflows with your ERP system', added: false },
-      { name: 'LIMS', desc: 'Connect laboratory data from LIMS into MU', added: false },
+      { name: 'ERP', desc: 'Integrate MU Agent 4.27 workflows with your ERP system', added: false },
+      { name: 'LIMS', desc: 'Connect laboratory data from LIMS into MU Agent 4.27', added: false },
     ],
   },
 ]
@@ -72,7 +72,7 @@ export default function ManageFeatures() {
         <div>
           <h1>Manage Features</h1>
           <p className="page-subtitle">
-            View all tools in MU, organized by Formulate, Design, Predict, and Manufacture.
+            View all tools in MU Agent 4.27, organized by Formulate, Design, Predict, and Manufacture.
           </p>
         </div>
         <div className="manage-header-actions">

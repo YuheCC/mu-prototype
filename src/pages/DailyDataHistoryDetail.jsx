@@ -85,7 +85,7 @@ export default function DailyDataHistoryDetail() {
           <div className="dda-step-body">
             <h2 className="dda-step-title">Run life prediction</h2>
             <p className="dda-step-desc">
-              For each eligible cell, MU triggered the Life Prediction tool, using the first 100 cycles as input to estimate
+              For each eligible cell, MU Agent 4.27 triggered the Life Prediction tool, using the first 100 cycles as input to estimate
               full cycle life and generate a monitoring report.
             </p>
           </div>

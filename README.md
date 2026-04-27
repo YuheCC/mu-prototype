@@ -1,4 +1,4 @@
-# Agent Skill
+# MU Agent 4.27
 
 产品原型，包含三个主模块：
 

@@ -26,7 +26,7 @@ export default function FormulateIntro() {
         <p className="fi-text">
           Molecular dynamics (MD) simulations in MU&apos;s platform uniquely combine advanced polarizable force fields with an automated
           workflow, capturing ion–solvent interactions with high fidelity. Users simply submit desired electrolyte formulations through
-          the MU portal containing any known or unknown molecules, and within days will receive quantitative predictions of key
+          the MU Agent 4.27 portal containing any known or unknown molecules, and within days will receive quantitative predictions of key
           properties—delivering faster and more accurate insights than conventional trial‑and‑error or classical modeling approaches.
         </p>
 
@@ -34,7 +34,7 @@ export default function FormulateIntro() {
           <div className="fi-flow-card">
             <div className="fi-flow-icon">🧑‍💻</div>
             <div className="fi-flow-title">MD simulation request</div>
-            <div className="fi-flow-sub">Submitted in MU user portal</div>
+            <div className="fi-flow-sub">Submitted in MU Agent 4.27 user portal</div>
           </div>
           <div className="fi-flow-arrow">➜</div>
           <div className="fi-flow-card">

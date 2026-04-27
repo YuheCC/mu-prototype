@@ -9,7 +9,7 @@ export default function HelpUserCenter() {
           ← 返回 Ask
         </Link>
         <h1>用户帮助中心</h1>
-        <p className="help-page-lead">查阅 MU Ask、Workbench 与 Assets 的使用说明与常见问题。</p>
+        <p className="help-page-lead">查阅 MU Agent 4.27 Ask、Workbench 与 Assets 的使用说明与常见问题。</p>
       </header>
       <section className="help-page-section">
         <h2>快速入口</h2>

@@ -11,7 +11,7 @@ const MU_WORKFLOW_EXAMPLES = [
     icon: '📰',
     schedule: '每日 08:00',
     desc: '每天早上八点，自动获取前沿材料科学相关的新闻，并发送到自己的微信/飞书账号上。',
-    tag: 'MU 提供',
+    tag: 'MU Agent 4.27 提供',
   },
 ]
 
@@ -71,7 +71,7 @@ export default function ManageWorkflows() {
       <header className="page-header page-header-with-back">
         <div>
           <h1>Manage Workflows</h1>
-          <p className="page-subtitle">浏览 MU 官方工作流模板，并管理你已启用的自定义工作流。</p>
+          <p className="page-subtitle">浏览 MU Agent 4.27 官方工作流模板，并管理你已启用的自定义工作流。</p>
         </div>
         <button type="button" className="page-back-btn" onClick={() => navigate('/features-workflows')}>
           ← Back to Workbench
@@ -80,7 +80,7 @@ export default function ManageWorkflows() {
 
       <section className="mw-section">
         <div className="mw-section-head">
-          <h2 className="mw-section-title">MU workflow</h2>
+          <h2 className="mw-section-title">MU Agent 4.27 workflow</h2>
           <p className="mw-section-desc">由平台提供的可订阅自动化模板，开箱即用。</p>
         </div>
         <div className="mw-grid">
